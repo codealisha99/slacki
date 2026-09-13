@@ -1,0 +1,29 @@
+# slacki — Slack CLI for AI Agents
+
+> The Slack CLI that gives AI agents full access to Slack. Read messages, search conversations, send replies, manage channels, and download file attachments — all from the command line. Token-efficient JSON output, zero-config auth, multi-workspace support. Works with Claude Code, Cursor, Codex, and any AI agent framework. One install, zero API fees.
+
+## Quick Start
+
+- [README](https://github.com/codealisha99/slacki/blob/master/README.md): Full documentation with installation, authentication, and usage examples
+- [Agent Skill (SKILL.md)](https://github.com/codealisha99/slacki/blob/master/skills/slacki/SKILL.md): Integration guide for Claude Code, Cursor, Codex, and custom AI agents
+- [Agent References](https://github.com/codealisha99/slacki/blob/master/skills/slacki/references/): Non-obvious targeting, output, and download behavior
+
+## Key Features
+
+- Read Slack messages, threads, and channel history from any URL or channel name
+- Search Slack messages and files with filters for channel, user, date, and content type
+- Send, schedule, edit, delete Slack messages, upload local files with `message send --attach`, and add/remove emoji reactions programmatically
+- Auto-download Slack file attachments (snippets, images, files) to local paths for AI agent consumption
+- Token-efficient compact JSON output so LLMs can consume Slack data cheaply
+- Zero-config auth: auto-detects Slack Desktop credentials on macOS, Windows, and Linux — with Chrome, Brave, and Firefox fallbacks
+- Multi-workspace Slack management with automatic workspace resolution
+- Human-in-the-loop message composing via browser-based WYSIWYG rich text editor (`message compose`)
+- Slack-native drafts that appear in the user's Slack client via `message draft` (list/create/update/delete)
+- Slack canvas creation from Markdown files or inline content, plus export to Markdown
+- Slack channel creation, user invites, and Slack Connect external invites
+
+## Optional
+
+- [npm Package](https://www.npmjs.com/package/slacki): `npm i -g slacki`
+- [GitHub Repository](https://github.com/codealisha99/slacki): Source code, issues, and releases
+- [Contributing Guide](https://github.com/codealisha99/slacki/blob/master/CONTRIBUTING.md): Development setup and build instructions
