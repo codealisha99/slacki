@@ -15,22 +15,19 @@ Guiding principle:
 
 ## Getting started
 
-Install via Bun (recommended):
+Clone and run from source (Bun):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/codealisha99/slacki/master/install.sh | sh
+git clone https://github.com/codealisha99/slacki.git
+cd slacki
+bun install
+bun run src/index.ts --help
 ```
 
-OR npm global install (requires Node >= 22.5):
+Or:
 
 ```bash
-npm i -g slacki
-```
-
-OR run via Nix flake:
-
-```bash
-nix run github:codealisha99/slacki
+bun ./bin/slacki.bun.js --help
 ```
 
 ## At a glance
