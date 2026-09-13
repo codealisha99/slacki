@@ -6,6 +6,8 @@ Thanks for contributing.
 
 If you'd like to be credited when we share your contribution on X, include your Twitter/X handle in your PR description.
 
+How the code is layered and what to test: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Development
 
 Install deps and run the CLI in dev mode:

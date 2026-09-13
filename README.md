@@ -67,7 +67,7 @@ bash ./scripts/install-skill.sh
 ```text
 slacki
 ├── doctor                         # diagnose auth, desktop paths, connectivity
-├── ui                             # local inbox for unreads / threads / replies
+├── ui                             # local web app: inbox, channels, search, Later, doctor
 ├── update                         # self-update (detects npm/bun/binary)
 ├── auth
 │   ├── whoami
@@ -177,9 +177,9 @@ To see what the CLI thinks is configured (no secrets):
 slacki doctor
 ```
 
-### Local inbox
+### Local web app
 
-A separate surface from the CLI: unread queue, message tape, reply, mark read. Localhost only.
+A browser surface on 127.0.0.1: inbox, channels, search, Later, doctor, plus reply and mark read. Same Slack session as the CLI.
 
 ```bash
 slacki ui
@@ -613,4 +613,6 @@ canvases; `--channel` requires a standard Slack token with Slack's `canvases:wri
 
 ## Developing / Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+How the repo is layered, how a request moves, and what to test: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+Setup and local commands: [CONTRIBUTING.md](CONTRIBUTING.md).

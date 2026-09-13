@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Inbox — slacki</title>
+    <title>slacki</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -55,16 +55,74 @@
       }
       .top {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         gap: 16px;
-        padding: 16px 20px 12px;
+        padding: 12px 20px;
         border-bottom: 1px solid var(--rule);
+        flex-wrap: wrap;
       }
       .mark {
         font-family: "Bricolage Grotesque", sans-serif;
         font-weight: 700;
         font-size: 22px;
         letter-spacing: -0.04em;
+      }
+      .nav {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .nav button {
+        padding: 6px 10px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: var(--quiet);
+        border: 1px solid transparent;
+      }
+      .nav button.active {
+        color: var(--voice);
+        border-color: var(--rule);
+        background: var(--panel);
+      }
+      .find {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px;
+        padding: 0 8px 12px;
+      }
+      .find input {
+        width: 100%;
+        background: var(--void);
+        border: 1px solid var(--rule);
+        color: var(--voice);
+        font: inherit;
+        padding: 8px 10px;
+      }
+      .report {
+        padding: 16px 20px 32px;
+        overflow: auto;
+      }
+      .report h3 {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--quiet);
+        margin: 16px 0 8px;
+      }
+      .report ul {
+        padding-left: 1.2em;
+        color: var(--voice);
+      }
+      .report li {
+        margin-bottom: 6px;
+      }
+      .report pre {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--quiet);
       }
       .meta {
         font-family: "IBM Plex Mono", monospace;
@@ -81,6 +139,9 @@
         display: grid;
         grid-template-columns: minmax(240px, 300px) 1fr;
         min-height: 0;
+      }
+      .shell.solo {
+        grid-template-columns: 1fr;
       }
       .queue {
         border-right: 1px solid var(--rule);
@@ -273,12 +334,23 @@
   </head>
   <body>
     <header class="top">
-      <div class="mark">Inbox</div>
+      <div class="mark">slacki</div>
+      <nav class="nav" id="nav">
+        <button type="button" data-view="inbox" class="active">Inbox</button>
+        <button type="button" data-view="channels">Channels</button>
+        <button type="button" data-view="search">Search</button>
+        <button type="button" data-view="later">Later</button>
+        <button type="button" data-view="doctor">Doctor</button>
+      </nav>
       <div class="meta" id="meta">connecting…</div>
     </header>
-    <main class="shell">
-      <aside class="queue">
-        <h2>Queue</h2>
+    <main class="shell" id="shell">
+      <aside class="queue" id="sidebar">
+        <h2 id="queue-label">Queue</h2>
+        <form class="find" id="search-box" hidden>
+          <input id="search-q" type="search" placeholder="Search messages…" autocomplete="off" />
+          <button class="go" type="submit">Go</button>
+        </form>
         <div id="queue"></div>
       </aside>
       <section class="tape">
@@ -288,8 +360,8 @@
         </div>
         <div class="msgs" id="msgs">
           <p class="empty">
-            Unreads land here as a tape. Pick a conversation, read it, reply, then mark it read.
-            This window is the human — sending from here is you, not the agent.
+            Inbox, channels, search, and Later share one tape. Pick something, read it, reply, then
+            mark it read. Sending from here is you, not the agent.
           </p>
         </div>
         <form class="composer" id="composer">
@@ -297,6 +369,7 @@
           <div class="actions">
             <button class="go" type="submit" id="send" disabled>Send</button>
             <button class="ghost" type="button" id="mark" disabled>Mark read</button>
+            <button class="ghost" type="button" id="later" disabled>Save Later</button>
           </div>
           <p class="status" id="status"></p>
         </form>
@@ -306,9 +379,9 @@
       const CONFIG = __INBOX_CONFIG__;
       const token = CONFIG.token;
       const state = {
+        view: "inbox",
         session: null,
-        unreads: [],
-        source: "unreads",
+        tickets: [],
         selected: null,
         messages: [],
         mode: "history",
@@ -341,11 +414,13 @@
       }
 
       function channelLabel(ch) {
+        if (!ch) return "";
         if (ch.channel_type === "dm") return ch.channel_name || "direct";
         return ch.channel_name ? "#" + ch.channel_name : ch.channel_id;
       }
 
       function lastSnippet(ch) {
+        if (ch.snippet) return ch.snippet;
         const msgs = ch.messages || [];
         const last = msgs[msgs.length - 1];
         return last && last.content ? last.content : "";
@@ -357,26 +432,41 @@
         el.className = "status" + (err ? " err" : "");
       }
 
+      function emptyCopy() {
+        if (state.view === "channels") return "No conversations returned.";
+        if (state.view === "search") return "Type a query and search.";
+        if (state.view === "later") return "Nothing in Later.";
+        return "No unreads. Refresh — or open Doctor if auth looks wrong.";
+      }
+
       function renderQueue() {
         const root = document.getElementById("queue");
-        if (!state.unreads.length) {
-          root.innerHTML =
-            '<p class="empty">No unreads. If Slack has mail, refresh — or run doctor if auth looks wrong.</p>';
+        if (state.view === "doctor") {
+          root.replaceChildren();
+          return;
+        }
+        if (!state.tickets.length) {
+          const p = document.createElement("p");
+          p.className = "empty";
+          p.textContent = emptyCopy();
+          root.replaceChildren(p);
           return;
         }
         root.replaceChildren(
-          ...state.unreads.map((ch) => {
+          ...state.tickets.map((ch) => {
             const btn = document.createElement("button");
             btn.type = "button";
             btn.className =
               "ticket" +
-              (state.selected === ch.channel_id ? " active" : "") +
+              (state.selected && state.selected.channel_id === ch.channel_id && !ch.ts
+                ? " active"
+                : "") +
+              (state.selected && ch.ts && state.selected.ts === ch.ts ? " active" : "") +
               (ch.mention_count > 0 ? " mention" : "");
             btn.innerHTML =
               '<div class="ticket-top"><span></span><span class="count"></span></div><div class="snippet"></div>';
             btn.querySelector(".ticket-top span").textContent = channelLabel(ch);
-            btn.querySelector(".count").textContent =
-              (ch.mention_count ? ch.mention_count + " @ · " : "") + ch.unread_count;
+            btn.querySelector(".count").textContent = ch.count || "";
             btn.querySelector(".snippet").textContent = lastSnippet(ch);
             btn.addEventListener("click", () => openChannel(ch));
             return btn;
@@ -385,22 +475,20 @@
       }
 
       function renderTape() {
+        if (state.view === "doctor") return;
         const title = document.getElementById("tape-title");
         const msgs = document.getElementById("msgs");
-        const ch = state.unreads.find((c) => c.channel_id === state.selected);
+        const ch = state.selected;
         title.textContent = ch
           ? channelLabel(ch) + (state.mode === "thread" ? " · thread" : "")
           : "Select a conversation";
         if (!state.messages.length) {
-          msgs.innerHTML = ch
-            ? '<p class="empty">No messages in this slice.</p>'
-            : document.querySelector(".empty")
-              ? ""
-              : '<p class="empty">Pick a conversation from the queue.</p>';
-          if (!ch) {
-            msgs.innerHTML =
-              '<p class="empty">Unreads land here as a tape. Pick a conversation, read it, reply, then mark it read.</p>';
-          }
+          const p = document.createElement("p");
+          p.className = "empty";
+          p.textContent = ch
+            ? "No messages in this slice."
+            : "Pick a conversation, search hit, or Later item. This window is the human — sending from here is you.";
+          msgs.replaceChildren(p);
           return;
         }
         msgs.replaceChildren(
@@ -436,6 +524,28 @@
         document.getElementById("draft").disabled = !on;
         document.getElementById("send").disabled = !on;
         document.getElementById("mark").disabled = !on;
+        document.getElementById("later").disabled = !on;
+      }
+
+      function setView(view) {
+        state.view = view;
+        document.querySelectorAll("#nav button").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.view === view);
+        });
+        document.getElementById("search-box").hidden = view !== "search";
+        document.getElementById("composer").hidden = view === "doctor";
+        document.getElementById("sidebar").hidden = view === "doctor";
+        document.getElementById("shell").classList.toggle("solo", view === "doctor");
+        document.getElementById("queue-label").textContent =
+          view === "inbox"
+            ? "Queue"
+            : view === "channels"
+              ? "Channels"
+              : view === "search"
+                ? "Results"
+                : view === "later"
+                  ? "Later"
+                  : "Doctor";
       }
 
       async function loadSession() {
@@ -454,17 +564,102 @@
           .join(" · ");
       }
 
-      async function loadUnreads() {
+      function ticketFromChannel(ch) {
+        const mention = ch.mention_count ? ch.mention_count + " @ · " : "";
+        const unread = ch.unread_count != null ? String(ch.unread_count) : "";
+        return {
+          ...ch,
+          count: mention + unread,
+          snippet: lastSnippet(ch),
+        };
+      }
+
+      async function loadInbox() {
         const data = await api("/api/unreads");
-        state.unreads = data.channels || [];
-        state.source = data.source || "unreads";
-        document.querySelector(".queue h2").textContent =
-          state.source === "recent" ? "Recent" : "Queue";
+        state.tickets = (data.channels || []).map(ticketFromChannel);
+        document.getElementById("queue-label").textContent =
+          data.source === "recent" ? "Recent" : "Queue";
         renderQueue();
       }
 
+      async function loadChannels() {
+        const data = await api("/api/channels");
+        state.tickets = (data.channels || []).map(ticketFromChannel);
+        renderQueue();
+      }
+
+      async function loadSearch(query) {
+        const data = await api("/api/search?q=" + encodeURIComponent(query));
+        state.tickets = (data.messages || []).map((m) => ({
+          channel_id: m.channel_id,
+          channel_name: m.channel_id,
+          channel_type: "channel",
+          ts: m.ts,
+          snippet: m.content || "",
+          count: clock(m.ts),
+        }));
+        renderQueue();
+      }
+
+      async function loadLater() {
+        const data = await api("/api/later");
+        state.tickets = (data.items || []).map((item) => ({
+          channel_id: item.channel_id,
+          channel_name: item.channel_name,
+          channel_type: "channel",
+          ts: item.ts,
+          snippet: item.message && item.message.content ? item.message.content : "",
+          count: clock(item.ts),
+        }));
+        renderQueue();
+      }
+
+      function renderDoctor(report) {
+        document.getElementById("tape-title").textContent = "Doctor";
+        const root = document.createElement("div");
+        root.className = "report";
+        const next = Array.isArray(report.next) ? report.next : [];
+        const h = document.createElement("h3");
+        h.textContent = "Next";
+        root.appendChild(h);
+        const ul = document.createElement("ul");
+        if (!next.length) {
+          const li = document.createElement("li");
+          li.textContent = "Looks configured.";
+          ul.appendChild(li);
+        } else {
+          next.forEach((step) => {
+            const li = document.createElement("li");
+            li.textContent = String(step);
+            ul.appendChild(li);
+          });
+        }
+        root.appendChild(ul);
+        const facts = document.createElement("h3");
+        facts.textContent = "Report";
+        root.appendChild(facts);
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(report, null, 2);
+        root.appendChild(pre);
+        document.getElementById("msgs").replaceChildren(root);
+        enableComposer(false);
+      }
+
+      async function loadDoctor() {
+        const report = await api("/api/doctor");
+        renderDoctor(report);
+      }
+
+      async function loadView() {
+        if (state.view === "inbox") await loadInbox();
+        else if (state.view === "channels") await loadChannels();
+        else if (state.view === "later") await loadLater();
+        else if (state.view === "doctor") await loadDoctor();
+        else renderQueue();
+      }
+
       async function openChannel(ch) {
-        state.selected = ch.channel_id;
+        state.selected = ch;
         state.mode = "history";
         state.threadTs = null;
         enableComposer(true);
@@ -499,13 +694,44 @@
         }
       }
 
-      document.getElementById("refresh").addEventListener("click", async () => {
-        setStatus("refreshing queue…");
+      document.getElementById("nav").addEventListener("click", async (event) => {
+        const btn = event.target.closest("button[data-view]");
+        if (!btn) return;
+        setView(btn.dataset.view);
+        state.tickets = [];
+        state.messages = [];
+        if (state.view !== "doctor") {
+          state.selected = null;
+          enableComposer(false);
+          renderTape();
+        }
+        setStatus("");
         try {
-          await loadUnreads();
-          if (state.selected) {
-            const ch = state.unreads.find((c) => c.channel_id === state.selected);
-            if (ch) await openChannel(ch);
+          await loadView();
+        } catch (err) {
+          setStatus(String(err.message || err), true);
+        }
+      });
+
+      document.getElementById("search-box").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const query = document.getElementById("search-q").value.trim();
+        if (!query) return;
+        setStatus("searching…");
+        try {
+          await loadSearch(query);
+          setStatus("");
+        } catch (err) {
+          setStatus(String(err.message || err), true);
+        }
+      });
+
+      document.getElementById("refresh").addEventListener("click", async () => {
+        setStatus("refreshing…");
+        try {
+          await loadView();
+          if (state.selected && state.view !== "doctor") {
+            await openChannel(state.selected);
           }
           setStatus("");
         } catch (err) {
@@ -524,17 +750,16 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              channel: state.selected,
+              channel: state.selected.channel_id,
               text,
               thread_ts: state.threadTs || undefined,
             }),
           });
           document.getElementById("draft").value = "";
           if (state.threadTs) {
-            await openThread(state.selected, state.threadTs);
+            await openThread(state.selected.channel_id, state.threadTs);
           } else {
-            const ch = state.unreads.find((c) => c.channel_id === state.selected);
-            if (ch) await openChannel(ch);
+            await openChannel(state.selected);
           }
           setStatus("sent");
         } catch (err) {
@@ -552,10 +777,26 @@
           await api("/api/mark", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: state.selected, ts: last.ts }),
+            body: JSON.stringify({ channel: state.selected.channel_id, ts: last.ts }),
           });
-          await loadUnreads();
+          if (state.view === "inbox") await loadInbox();
           setStatus("marked read");
+        } catch (err) {
+          setStatus(String(err.message || err), true);
+        }
+      });
+
+      document.getElementById("later").addEventListener("click", async () => {
+        const last = state.messages[state.messages.length - 1];
+        if (!state.selected || !last) return;
+        setStatus("saving Later…");
+        try {
+          await api("/api/later", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ channel: state.selected.channel_id, ts: last.ts }),
+          });
+          setStatus("saved to Later");
         } catch (err) {
           setStatus(String(err.message || err), true);
         }
@@ -564,7 +805,7 @@
       (async () => {
         try {
           await loadSession();
-          await loadUnreads();
+          await loadInbox();
         } catch (err) {
           document.getElementById("meta").textContent = "could not connect";
           document.getElementById("msgs").innerHTML = '<p class="error-banner"></p>';

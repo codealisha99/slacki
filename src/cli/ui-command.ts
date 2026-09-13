@@ -6,7 +6,7 @@ import { isSafeModeEnabled } from "./safe-mode.ts";
 export function registerUiCommand(input: { program: Command; ctx: CliContext }): void {
   input.program
     .command("ui")
-    .description("Open a local inbox for unreads, threads, and replies (127.0.0.1 only)")
+    .description("Open the local web app: inbox, channels, search, Later, doctor (127.0.0.1 only)")
     .option(
       "--workspace <url>",
       "Workspace selector (full URL or unique substring; needed when you have multiple workspaces)",
@@ -28,7 +28,7 @@ export function registerUiCommand(input: { program: Command; ctx: CliContext }):
             cliFlag: Boolean(input.program.opts().safeMode),
           }),
         });
-        process.stderr.write("Inbox is local-only. Ctrl+C to stop.\n");
+        process.stderr.write("slacki web app is local-only. Ctrl+C to stop.\n");
         await new Promise<void>((resolve) => {
           const stop = async () => {
             await running.close();
