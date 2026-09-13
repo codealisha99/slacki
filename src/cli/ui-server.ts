@@ -5,7 +5,10 @@ import type { CliContext } from "./context.ts";
 import { fetchUnreads } from "../slack/unreads.ts";
 import { fetchChannelHistory, fetchThread, toCompactMessage } from "../slack/messages.ts";
 import { listUserConversations, markConversation } from "../slack/channels.ts";
+import { searchSlack } from "../slack/search.ts";
+import { fetchLaterItems, saveLater } from "../slack/later.ts";
 import { sendMessage } from "./message-actions.ts";
+import { collectDoctorReport } from "./doctor-command.ts";
 import { isSafeModeEnabled } from "./safe-mode.ts";
 import { getString, isRecord } from "../lib/object-type-guards.ts";
 // @ts-ignore — import attributes need module:"esnext" in tsconfig; Bun handles this fine
@@ -76,6 +79,28 @@ function requireTs(value: string | null): string {
     throw new Error('ts must look like "1234567890.123456"');
   }
   return ts;
+}
+
+function conversationTicket(ch: Record<string, unknown>): {
+  channel_id: string;
+  channel_name?: string;
+  channel_type: string;
+  unread_count: number;
+  mention_count: number;
+} | null {
+  const id = getString(ch.id);
+  if (!id) {
+    return null;
+  }
+  const isIm = ch.is_im === true;
+  const isMpim = ch.is_mpim === true;
+  return {
+    channel_id: id,
+    channel_name: getString(ch.name) ?? getString(ch.user),
+    channel_type: isIm ? "dm" : isMpim ? "mpim" : "channel",
+    unread_count: 0,
+    mention_count: 0,
+  };
 }
 
 function injectHtml(token: string): string {
@@ -158,21 +183,7 @@ export function startInboxUi(options: InboxUiOptions): Promise<RunningInbox> {
                   excludeArchived: true,
                 });
                 const channels = page.channels
-                  .map((ch) => {
-                    const id = getString(ch.id);
-                    if (!id) {
-                      return null;
-                    }
-                    const isIm = ch.is_im === true;
-                    const isMpim = ch.is_mpim === true;
-                    return {
-                      channel_id: id,
-                      channel_name: getString(ch.name) ?? getString(ch.user),
-                      channel_type: isIm ? "dm" : isMpim ? "mpim" : "channel",
-                      unread_count: 0,
-                      mention_count: 0,
-                    };
-                  })
+                  .map((ch) => conversationTicket(ch))
                   .filter((ch): ch is NonNullable<typeof ch> => ch !== null);
                 return { source: "recent", channels, threads: unreads.threads };
               } catch {
@@ -268,6 +279,109 @@ export function startInboxUi(options: InboxUiOptions): Promise<RunningInbox> {
             },
           });
           json(res, 200, { ok: true, channel: channelId, ts });
+          return;
+        }
+
+        if (req.method === "GET" && url.pathname === "/api/channels") {
+          if (!isAuthorized(req)) {
+            json(res, 401, { ok: false, error: "Unauthorized" });
+            return;
+          }
+          const payload = await ctx.withAutoRefresh({
+            workspaceUrl,
+            work: async () => {
+              const { client } = await ctx.getClientForWorkspace(workspaceUrl);
+              const page = await listUserConversations(client, {
+                limit: 80,
+                excludeArchived: true,
+              });
+              const channels = page.channels
+                .map((ch) => conversationTicket(ch))
+                .filter((ch): ch is NonNullable<typeof ch> => ch !== null);
+              return { channels, next_cursor: page.next_cursor };
+            },
+          });
+          json(res, 200, payload);
+          return;
+        }
+
+        if (req.method === "GET" && url.pathname === "/api/search") {
+          if (!isAuthorized(req)) {
+            json(res, 401, { ok: false, error: "Unauthorized" });
+            return;
+          }
+          const query = url.searchParams.get("q")?.trim() ?? "";
+          if (!query) {
+            json(res, 400, { ok: false, error: "q is required" });
+            return;
+          }
+          const payload = await ctx.withAutoRefresh({
+            workspaceUrl,
+            work: async () => {
+              const { client, auth, workspace_url } = await ctx.getClientForWorkspace(workspaceUrl);
+              return searchSlack({
+                client,
+                auth,
+                options: {
+                  query,
+                  kind: "messages",
+                  download: false,
+                  limit: 20,
+                  max_content_chars: 400,
+                  workspace_url,
+                },
+              });
+            },
+          });
+          json(res, 200, { query, ...payload });
+          return;
+        }
+
+        if (req.method === "GET" && url.pathname === "/api/later") {
+          if (!isAuthorized(req)) {
+            json(res, 401, { ok: false, error: "Unauthorized" });
+            return;
+          }
+          const payload = await ctx.withAutoRefresh({
+            workspaceUrl,
+            work: async () => {
+              const { client } = await ctx.getClientForWorkspace(workspaceUrl);
+              return fetchLaterItems(client, {
+                state: "in_progress",
+                limit: 40,
+                maxBodyChars: 280,
+              });
+            },
+          });
+          json(res, 200, payload);
+          return;
+        }
+
+        if (req.method === "POST" && url.pathname === "/api/later") {
+          if (!isAuthorized(req)) {
+            json(res, 401, { ok: false, error: "Unauthorized" });
+            return;
+          }
+          const body = JSON.parse(await readBody(req)) as { channel?: string; ts?: string };
+          const channelId = requireChannelId(body.channel ?? null);
+          const ts = requireTs(body.ts ?? null);
+          await ctx.withAutoRefresh({
+            workspaceUrl,
+            work: async () => {
+              const { client } = await ctx.getClientForWorkspace(workspaceUrl);
+              await saveLater(client, { channelId, ts });
+            },
+          });
+          json(res, 200, { ok: true, channel: channelId, ts });
+          return;
+        }
+
+        if (req.method === "GET" && url.pathname === "/api/doctor") {
+          if (!isAuthorized(req)) {
+            json(res, 401, { ok: false, error: "Unauthorized" });
+            return;
+          }
+          json(res, 200, await collectDoctorReport({ ctx, cliSafeMode: options.cliSafeMode }));
           return;
         }
 

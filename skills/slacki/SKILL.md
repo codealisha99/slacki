@@ -21,7 +21,7 @@ If a capability named here is absent from installed help, report version skew in
 - Perform write actions only when explicitly requested: sends, edits, deletes, reactions, invitations, channel or canvas creation, mark-read operations, scheduling or canceling delivery, uploads, Later state/reminder changes, DM/group-DM creation, and `workflow run`. Workflow runs can execute downstream actions.
 - For compose- or review-only requests, return proposed text without invoking Slack, or use `message draft create` to add a Slack-native draft the user can review and send (nothing is posted). `message compose` is send-capable; use it only when the user explicitly asks to open the interactive editor. In CI or another noninteractive environment, do not invoke it without separate authorization to send immediately: CI skips the editor and sends supplied text.
 - With `SLACKI_SAFE_MODE=1` (or the global `--safe-mode` flag) set, safe mode is enforced at the tool level: `message send` is redirected to the draft editor; Slack-native drafts stay allowed; every other Slack mutation is blocked. Use `slacki doctor` to see whether it is on.
-- `slacki ui` opens a local human inbox (unreads → read → reply → mark). Do not launch it unless the user asks for the interactive inbox. Sending from that window is the user.
+- `slacki ui` opens a local web app (inbox, channels, search, Later, doctor). Do not launch it unless the user asks for the interactive UI. Sending from that window is the user.
 
 ## Workflow
 

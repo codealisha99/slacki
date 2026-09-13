@@ -56,6 +56,45 @@ function stubCtx(calls: { method: string; params: Record<string, unknown> }[]): 
       if (method === "conversations.mark") {
         return { ok: true };
       }
+      if (method === "users.conversations") {
+        return {
+          channels: [
+            { id: "C01234567", name: "general", is_im: false },
+            { id: "D0DIRECT01", user: "U2", is_im: true },
+          ],
+        };
+      }
+      if (method === "search.messages") {
+        return {
+          messages: {
+            matches: [
+              {
+                ts: "1700000001.000000",
+                text: "older",
+                channel: { id: "C01234567", name: "general" },
+              },
+            ],
+            paging: { pages: 1 },
+          },
+        };
+      }
+      if (method === "saved.list") {
+        return {
+          counts: { uncompleted_count: 1, archived_count: 0, completed_count: 0, total_count: 1 },
+          saved_items: [
+            {
+              item_type: "message",
+              state: "in_progress",
+              item_id: "C01234567",
+              ts: "1700000001.000000",
+              date_created: 1700000000,
+            },
+          ],
+        };
+      }
+      if (method === "saved.add") {
+        return { ok: true };
+      }
       return { ok: true };
     },
   };
@@ -192,5 +231,62 @@ describe("inbox UI server", () => {
     expect(mark.status).toBe(200);
     expect(calls.some((c) => c.method === "chat.postMessage")).toBe(true);
     expect(calls.some((c) => c.method === "conversations.mark")).toBe(true);
+  });
+
+  test("channels, search, later, and doctor require the session token", async () => {
+    await boot();
+    for (const path of ["/api/channels", "/api/search?q=hi", "/api/later", "/api/doctor"]) {
+      const res = await fetch(`${running!.url}${path}`);
+      expect(res.status).toBe(401);
+    }
+    const laterWrite = await fetch(`${running!.url}/api/later`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: "C01234567", ts: "1700000001.000000" }),
+    });
+    expect(laterWrite.status).toBe(401);
+  });
+
+  test("channels, search, later, and doctor work with the token", async () => {
+    const { calls } = await boot();
+    const headers = {
+      "x-inbox-token": running!.token,
+      "Content-Type": "application/json",
+    };
+    const channels = (await fetch(`${running!.url}/api/channels`, {
+      headers: { "x-inbox-token": running!.token },
+    }).then((r) => r.json())) as { channels: { channel_name?: string; channel_type?: string }[] };
+    expect(channels.channels.some((ch) => ch.channel_name === "general")).toBe(true);
+    expect(channels.channels.some((ch) => ch.channel_type === "dm")).toBe(true);
+
+    const search = (await fetch(`${running!.url}/api/search?q=older`, {
+      headers: { "x-inbox-token": running!.token },
+    }).then((r) => r.json())) as { messages: { content?: string; channel_id?: string }[] };
+    expect(search.messages[0]?.channel_id).toBe("C01234567");
+    expect(search.messages[0]?.content).toBe("older");
+
+    const later = (await fetch(`${running!.url}/api/later`, {
+      headers: { "x-inbox-token": running!.token },
+    }).then((r) => r.json())) as { items: { channel_id?: string }[] };
+    expect(later.items[0]?.channel_id).toBe("C01234567");
+
+    const save = await fetch(`${running!.url}/api/later`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ channel: "C01234567", ts: "1700000001.000000" }),
+    });
+    expect(save.status).toBe(200);
+
+    const doctor = await fetch(`${running!.url}/api/doctor`, {
+      headers: { "x-inbox-token": running!.token },
+    });
+    expect(doctor.status).toBe(200);
+    const report = (await doctor.json()) as { version?: string };
+    expect(typeof report.version).toBe("string");
+
+    expect(calls.some((c) => c.method === "users.conversations")).toBe(true);
+    expect(calls.some((c) => c.method === "search.messages")).toBe(true);
+    expect(calls.some((c) => c.method === "saved.list")).toBe(true);
+    expect(calls.some((c) => c.method === "saved.add")).toBe(true);
   });
 });
