@@ -5,15 +5,14 @@ description: "Slack CLI for agents: read URLs/threads/history/unreads/later/canv
 
 # slacki
 
-Use `slacki` from `$PATH`. If it is missing, install it with:
+Run this CLI from the repo (not a published package):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/codealisha99/slacki/master/install.sh | sh
+bun install
+bun run src/index.ts --help
 ```
 
-Fallback: `npm i -g slacki` (Node >= 22.5).
-
-Run `slacki --help` or the relevant subcommand help before guessing a command or flag.
+Or `bun ./bin/slacki.bun.js --help`. Treat that help output as authoritative before guessing a command or flag.
 If a capability named here is absent from installed help, report version skew instead of guessing. Do not self-update the CLI without explicit authorization.
 
 ## Safety

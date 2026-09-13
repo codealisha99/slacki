@@ -1,6 +1,6 @@
 # slacki — Slack CLI for AI Agents
 
-> The Slack CLI that gives AI agents full access to Slack. Read messages, search conversations, send replies, manage channels, and download file attachments — all from the command line. Token-efficient JSON output, zero-config auth, multi-workspace support. Works with Claude Code, Cursor, Codex, and any AI agent framework. One install, zero API fees.
+> The Slack CLI that gives AI agents full access to Slack. Read messages, search conversations, send replies, manage channels, and download file attachments — all from the command line. Token-efficient JSON output, zero-config auth, multi-workspace support. Works with Claude Code, Cursor, Codex, and any AI agent framework. Run from source, zero API fees.
 
 ## Quick Start
 
@@ -24,6 +24,5 @@
 
 ## Optional
 
-- [npm Package](https://www.npmjs.com/package/slacki): `npm i -g slacki`
-- [GitHub Repository](https://github.com/codealisha99/slacki): Source code, issues, and releases
+- [GitHub Repository](https://github.com/codealisha99/slacki): Source code and issues
 - [Contributing Guide](https://github.com/codealisha99/slacki/blob/master/CONTRIBUTING.md): Development setup and build instructions
