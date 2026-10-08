@@ -58,3 +58,21 @@ describe("SlackApiClient browser multipart transport", () => {
     }
   });
 });
+
+test("does not shorten a long Retry-After or retry invalid headers", async () => {
+  process.env.SLACKI_RATE_LIMIT_MAX_WAIT_MS = "30000";
+  for (const header of ["60", "invalid"]) {
+    const fetchMock = mock(
+      async () => new Response("{}", { status: 429, headers: { "Retry-After": header } }),
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const client = new SlackApiClient(
+      { auth_type: "browser", xoxc_token: "xoxc-test", xoxd_cookie: "xoxd-test" },
+      { workspaceUrl: "https://workspace.slack.com" },
+    );
+    await expect(
+      client.api("chat.postMessage", { channel: "C01234567", text: "test" }),
+    ).rejects.toThrow("rate limited");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  }
+});

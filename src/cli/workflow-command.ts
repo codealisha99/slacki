@@ -1,3 +1,5 @@
+import { createActionService } from "../core/runtime.ts";
+import { isSafeModeEnabledFor } from "./safe-mode.ts";
 import type { Command } from "commander";
 import type { CliContext } from "./context.ts";
 import { pruneEmpty } from "../lib/compact-json.ts";
@@ -7,7 +9,6 @@ import {
   listChannelWorkflows,
   previewWorkflow,
   resolveShortcutUrl,
-  runWorkflow,
 } from "../slack/workflows.ts";
 import { assertSafeModeAllows } from "./safe-mode.ts";
 
@@ -106,7 +107,8 @@ export function registerWorkflowCommand(input: { program: Command; ctx: CliConte
 
   workflowCmd
     .command("run")
-    .description("Trip a workflow trigger")
+    .description("Request a Slack workflow trigger through policy and approval")
+    .option("--dry-run", "Preview context and policy without triggering the workflow")
     .argument("<trigger-id>", "Trigger ID (Ft...)")
     .requiredOption("--channel <id-or-name>", "Channel where the workflow is bookmarked")
     .option(
@@ -114,9 +116,14 @@ export function registerWorkflowCommand(input: { program: Command; ctx: CliConte
       "Workspace selector (full URL or unique substring; required if you have multiple workspaces)",
     )
     .action(async (...args) => {
-      const [triggerId, options] = args as [string, WorkspaceOption & { channel: string }];
+      const [triggerId, options] = args as [
+        string,
+        WorkspaceOption & { channel: string; dryRun?: boolean },
+      ];
       try {
-        assertSafeModeAllows(input.program, "workflow run");
+        if (!options.dryRun) {
+          assertSafeModeAllows(input.program, "workflow run");
+        }
         const workspaceUrl = input.ctx.effectiveWorkspaceUrl(options.workspace);
         const payload = await input.ctx.withAutoRefresh({
           workspaceUrl,
@@ -124,7 +131,22 @@ export function registerWorkflowCommand(input: { program: Command; ctx: CliConte
             const { client } = await input.ctx.getClientForWorkspace(workspaceUrl);
             const channelId = await resolveChannelId(client, options.channel);
             const shortcutUrl = await resolveShortcutUrl(client, { channelId, triggerId });
-            return await runWorkflow(client, { shortcutUrl, channelId, triggerId });
+            const auth = await client.api("auth.test");
+            const workspace =
+              typeof auth.url === "string" ? new URL(auth.url).origin : workspaceUrl;
+            const request = {
+              type: "workflow.run",
+              workspace,
+              target: channelId,
+              parameters: { trigger_id: triggerId, shortcut_url: shortcutUrl },
+            };
+            const service = createActionService(input.ctx, {
+              safeMode: isSafeModeEnabledFor(input.program),
+            });
+            const actor = { id: "local-operator", source: "HUMAN_CLI" as const };
+            return options.dryRun
+              ? service.preview(request, actor)
+              : service.request(request, actor);
           },
         });
         console.log(JSON.stringify(pruneEmpty(payload), null, 2));

@@ -1,3 +1,4 @@
+import { registerActionCommand } from "../src/cli/action-command.ts";
 import { describe, expect, test } from "bun:test";
 import { Command } from "commander";
 import type { CliContext } from "../src/cli/context.ts";
@@ -29,6 +30,7 @@ function buildProgram(): Command {
   const program = new Command();
   const ctx = {} as CliContext;
   program.option("--safe-mode");
+  registerActionCommand({ program, ctx });
   registerAuthCommand({ program, ctx });
   registerDoctorCommand({ program, ctx });
   registerMessageCommand({ program, ctx });
@@ -45,6 +47,20 @@ function buildProgram(): Command {
 }
 
 const EXPECTED_COMMANDS = [
+  "action",
+  "action list",
+  "action get",
+  "action activity",
+  "action request",
+  "action approve",
+  "action reject",
+  "action edit",
+  "policy",
+  "policy list",
+  "policy check",
+  "plan",
+  "automation",
+  "automation run",
   "auth",
   "auth add",
   "auth import-brave",
@@ -112,7 +128,7 @@ const EXPECTED_COMMANDS = [
 describe("public CLI command tree", () => {
   test("matches the documented command set (update this list when adding a verb)", () => {
     const paths = collectCommandPaths(buildProgram()).sort();
-    expect(paths).toEqual(EXPECTED_COMMANDS);
+    expect(paths).toEqual([...EXPECTED_COMMANDS].sort());
   });
 
   test("every safe-mode blocked command exists on the tree", () => {

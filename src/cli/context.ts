@@ -1,3 +1,5 @@
+import { controlledClient } from "../core/legacy-bridge.ts";
+import type { Actor } from "../core/action.ts";
 import { extractFromBrave } from "../auth/brave.ts";
 import { extractFromChrome } from "../auth/chrome.ts";
 import { parseSlackCurlCommand } from "../auth/curl.ts";
@@ -10,6 +12,8 @@ import { type SlackAuth } from "../slack/client.ts";
 import { getClientForWorkspace, normalizeUrl } from "./context-client-resolver.ts";
 
 export type CliContext = {
+  rawContext?: () => CliContext;
+  forActor?: (actor: Actor) => CliContext;
   effectiveWorkspaceUrl: (flag?: string) => string | undefined;
   assertWorkspaceSpecifiedForChannelNames: (input: {
     workspaceUrl: string | undefined;
@@ -135,8 +139,10 @@ async function withAutoRefresh<T>(input: {
   }
 }
 
-export function createCliContext(): CliContext {
-  return {
+export function createCliContext(
+  actor: Actor = { id: "local-operator", source: "HUMAN_CLI" },
+): CliContext {
+  const raw: CliContext = {
     effectiveWorkspaceUrl,
     assertWorkspaceSpecifiedForChannelNames,
     withAutoRefresh,
@@ -149,5 +155,22 @@ export function createCliContext(): CliContext {
     importChrome: extractFromChrome,
     importBrave: extractFromBrave,
     importFirefox: extractFromFirefox,
+  };
+  return {
+    ...raw,
+    rawContext: () => raw,
+    forActor: (next) => createCliContext(next),
+    getClientForWorkspace: async (workspace) => {
+      const resolved = await getClientForWorkspace(workspace);
+      return {
+        ...resolved,
+        client: controlledClient({
+          client: resolved.client,
+          rawContext: raw,
+          workspace: resolved.workspace_url,
+          actor,
+        }),
+      };
+    },
   };
 }
