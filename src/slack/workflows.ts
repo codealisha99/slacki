@@ -182,9 +182,9 @@ export type WorkflowRunResult = {
 
 export async function runWorkflow(
   client: SlackApiClient,
-  input: { shortcutUrl: string; channelId: string; triggerId: string },
+  input: { shortcutUrl: string; channelId: string; triggerId: string; clientToken?: string },
 ): Promise<WorkflowRunResult> {
-  const clientToken = `cli-${Date.now()}`;
+  const clientToken = input.clientToken ?? `cli-${Date.now()}`;
   const resp = await client.api("workflows.triggers.trip", {
     url: input.shortcutUrl,
     client_token: clientToken,
