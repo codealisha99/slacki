@@ -29,13 +29,15 @@
     "prepublishOnly": "bun run build:npm",
     "build:release": "sh ./scripts/build-release-assets.sh",
     "release": "sh ./scripts/release.sh",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json",
     "test": "bun test",
     "lint": "oxlint .",
     "lintf": "oxlint --fix .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --write .",
-    "format:check": "oxfmt --check ."
+    "format:check": "oxfmt --check .",
+    "test:e2e": "playwright test",
+    "test:live": "bun scripts/live-smoke.ts"
   },
   "dependencies": {
     "@slack/web-api": "^7.13.0",
@@ -47,6 +49,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^22",
     "@types/semver": "^7.7.1",
     "@types/turndown": "^5.0.6",
