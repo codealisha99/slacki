@@ -1,3 +1,13 @@
+import { listDrafts } from "../slack/drafts.ts";
+import { listScheduledMessages } from "../slack/scheduled-messages.ts";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createActionService } from "../core/runtime.ts";
+import type { ActionService } from "../core/service.ts";
+import { ControlError } from "../core/action.ts";
+import { sanitize } from "../core/store.ts";
+import { createControlRoutes, tokenMatches } from "./control-routes.ts";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -14,6 +24,9 @@ import { getString, isRecord } from "../lib/object-type-guards.ts";
 // @ts-ignore — import attributes need module:"esnext" in tsconfig; Bun handles this fine
 import inboxHtml from "./ui.html" with { type: "text" };
 
+// @ts-ignore — Bun text loader, like the existing UI template
+import controlHtml from "./control.html" with { type: "text" };
+
 const INBOX_TOKEN_HEADER = "x-inbox-token";
 const CHANNEL_ID_RE = /^[CDG][A-Z0-9]+$/i;
 const TS_RE = /^\d+\.\d+$/;
@@ -25,11 +38,13 @@ export type InboxUiOptions = {
   port?: number;
   openBrowser?: boolean;
   cliSafeMode?: boolean;
+  actionService?: ActionService;
 };
 
 export type RunningInbox = {
   url: string;
   token: string;
+  sessionFile: string;
   close: () => Promise<void>;
 };
 
@@ -103,9 +118,13 @@ function conversationTicket(ch: Record<string, unknown>): {
   };
 }
 
-function injectHtml(token: string): string {
-  const injected = JSON.stringify({ token }).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
-  return String(inboxHtml).replace("__INBOX_CONFIG__", injected);
+function injectHtml(authenticated: boolean): string {
+  const injected = JSON.stringify({ token: "", authenticated })
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e");
+  return String(inboxHtml)
+    .replace("__INBOX_CONFIG__", injected)
+    .replace("</body>", `${String(controlHtml)}</body>`);
 }
 
 async function sessionPayload(
@@ -131,23 +150,91 @@ async function sessionPayload(
   });
 }
 
-export function startInboxUi(options: InboxUiOptions): Promise<RunningInbox> {
+export async function startInboxUi(options: InboxUiOptions): Promise<RunningInbox> {
   const token = randomBytes(24).toString("hex");
-  const ctx = options.ctx;
-  const workspaceUrl = options.workspaceUrl;
+  const sessionDir = await mkdtemp(join(tmpdir(), "slacki-ui-"));
+  const sessionFile = join(sessionDir, "session-code");
+  await writeFile(sessionFile, token, { mode: 0o600 });
+  const expiresAt = Date.now() + 60 * 60 * 1000;
+  const control = createControlRoutes(
+    options.actionService ?? createActionService(options.ctx, { safeMode: options.cliSafeMode }),
+    {
+      drafts: async () => {
+        const { client } = await options.ctx.getClientForWorkspace(options.workspaceUrl);
+        return listDrafts(client);
+      },
+      scheduled: async () => {
+        const { client } = await options.ctx.getClientForWorkspace(options.workspaceUrl);
+        return listScheduledMessages(client);
+      },
+    },
+  );
+  const ctx = options.ctx.forActor?.({ id: "local-operator", source: "HUMAN_UI" }) ?? options.ctx;
+  const { workspaceUrl } = options;
 
   const isAuthorized = (req: IncomingMessage): boolean => {
     const header = req.headers[INBOX_TOKEN_HEADER];
-    return typeof header === "string" && header.length > 0 && header === token;
+    const cookie = /(?:^|; )slacki_session=([a-f0-9]+)/.exec(req.headers.cookie ?? "")?.[1];
+    return Date.now() < expiresAt && (tokenMatches(header, token) || tokenMatches(cookie, token));
   };
 
   return new Promise<RunningInbox>((resolve, reject) => {
     const server: Server = createServer(async (req, res) => {
       try {
         const url = new URL(req.url ?? "/", "http://127.0.0.1");
+        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Referrer-Policy", "no-referrer");
+        res.setHeader(
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'",
+        );
+        const host = req.headers.host ?? "";
+        const { origin } = req.headers;
+        if (!/^127\.0\.0\.1:\d+$/.test(host) || (origin && origin !== `http://${host}`)) {
+          json(res, 403, { ok: false, error: "Invalid local origin" });
+          return;
+        }
+        if (url.pathname === "/api/unlock" && req.method === "POST") {
+          const body = JSON.parse(await readBody(req));
+          if (Date.now() >= expiresAt || !tokenMatches(body.code, token)) {
+            json(res, 401, { ok: false, error: "Invalid or expired operator code" });
+            return;
+          }
+          res.setHeader(
+            "Set-Cookie",
+            `slacki_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))}`,
+          );
+          json(res, 200, { ok: true });
+          return;
+        }
+        if (url.pathname.startsWith("/api/control/") || url.pathname.startsWith("/api/agent/")) {
+          const isAgent = url.pathname.startsWith("/api/agent/");
+          if (!isAgent && !isAuthorized(req)) {
+            json(res, 401, {
+              ok: false,
+              error: "Unauthorized or expired session. Restart the UI.",
+            });
+            return;
+          }
+          const body = req.method === "POST" ? JSON.parse(await readBody(req)) : undefined;
+          const payload = await control({
+            path: url.pathname,
+            method: req.method ?? "GET",
+            body,
+            human: isAuthorized(req),
+            agentToken:
+              typeof req.headers["x-slacki-agent-token"] === "string"
+                ? req.headers["x-slacki-agent-token"]
+                : undefined,
+          });
+          json(res, 200, payload);
+          return;
+        }
+
         if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
           res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-          res.end(injectHtml(token));
+          res.end(injectHtml(isAuthorized(req)));
           return;
         }
 
@@ -387,15 +474,27 @@ export function startInboxUi(options: InboxUiOptions): Promise<RunningInbox> {
 
         json(res, 404, { ok: false, error: "Not found" });
       } catch (err: unknown) {
-        const message =
-          err instanceof Error
-            ? err.message.replace(/xox[a-z]-[A-Za-z0-9-]+/g, "[REDACTED]")
-            : "Request failed";
-        json(res, 500, { ok: false, error: message });
+        const code = err instanceof ControlError ? err.code : "SlackApiError";
+        const status =
+          code === "PermissionError"
+            ? 403
+            : code === "NotFoundError"
+              ? 404
+              : code === "ConflictError"
+                ? 409
+                : code === "ValidationError" || err instanceof SyntaxError
+                  ? 400
+                  : 500;
+        json(res, status, {
+          ok: false,
+          code,
+          error: sanitize(err instanceof Error ? err.message : "Request failed"),
+        });
       }
     });
 
     server.on("error", (err) => {
+      void rm(sessionDir, { recursive: true, force: true });
       reject(err);
     });
 
@@ -404,17 +503,22 @@ export function startInboxUi(options: InboxUiOptions): Promise<RunningInbox> {
       const addr = server.address();
       const port = typeof addr === "object" && addr ? addr.port : requestedPort;
       const url = `http://127.0.0.1:${port}`;
-      process.stderr.write(`Inbox: ${url}\n`);
+      process.stderr.write(
+        `Inbox: ${url}\nOperator code file (private, expires in 1 hour): ${sessionFile}\n`,
+      );
       if (options.openBrowser !== false) {
         openBrowser(url);
       }
       resolve({
         url,
         token,
-        close: () =>
-          new Promise<void>((closeResolve, closeReject) => {
+        sessionFile,
+        close: async () => {
+          await new Promise<void>((closeResolve, closeReject) => {
             server.close((err) => (err ? closeReject(err) : closeResolve()));
-          }),
+          });
+          await rm(sessionDir, { recursive: true, force: true });
+        },
       });
     });
   });

@@ -1,0 +1,602 @@
+<style>
+  #control {
+    padding: 32px;
+    overflow: auto;
+    min-width: 0;
+  }
+  #control h1 {
+    font-size: 28px;
+    letter-spacing: -0.6px;
+    margin: 0 0 8px;
+  }
+  #control h2 {
+    font-size: 18px;
+    margin: 28px 0 12px;
+  }
+  #control p {
+    max-width: 78ch;
+  }
+  #control .control-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: start;
+  }
+  #control .summary {
+    display: flex;
+    gap: 28px;
+    padding: 22px 0;
+    flex-wrap: wrap;
+    border-block: 1px solid var(--border);
+    margin-block: 24px;
+  }
+  #control .summary strong {
+    display: block;
+    font-size: 26px;
+    font-weight: 550;
+  }
+  #control .summary span {
+    color: var(--muted);
+  }
+  #control .action-row {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+  #control .action-row button {
+    text-align: left;
+  }
+  #control .detail {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    margin-block: 20px;
+    border-radius: 10px;
+  }
+  #control pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: 12px/1.6 var(--mono);
+  }
+  #control label {
+    display: block;
+    margin-top: 16px;
+    font-weight: 600;
+  }
+  #control input,
+  #control textarea,
+  #control select {
+    display: block;
+    width: 100%;
+    max-width: 800px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 6px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  #control textarea {
+    min-height: 120px;
+  }
+  #control .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  #control .badge {
+    font-size: 12px;
+    color: var(--accent-text);
+    background: var(--accent-soft);
+    padding: 5px 8px;
+    border-radius: 6px;
+    align-self: start;
+  }
+  #control .problem {
+    color: var(--danger);
+  }
+  #control-notice {
+    min-height: 24px;
+  }
+  .nav {
+    overflow-y: auto;
+  }
+  @media (max-width: 760px) {
+    #control {
+      padding: 20px 16px;
+    }
+    .nav {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+    }
+    .nav button {
+      flex-shrink: 0;
+    }
+  }
+</style>
+<main id="control" hidden aria-label="Slacki control center">
+  <div class="control-top">
+    <div>
+      <h1 id="control-title">Dashboard</h1>
+      <p id="control-subtitle">Review and control Slack automation.</p>
+    </div>
+    <button class="ghost" id="control-refresh">Refresh</button>
+  </div>
+  <p id="control-notice" role="status" aria-live="polite"></p>
+  <div id="control-body"></div>
+</main>
+<script>
+  (() => {
+    const views = [
+      "Dashboard",
+      "Actions",
+      "Approvals",
+      "Drafts",
+      "Scheduled",
+      "Workflows",
+      "Activity",
+      "Policies",
+      "Settings",
+    ];
+    const nav = document.getElementById("nav");
+    const panel = document.getElementById("control");
+    const body = document.getElementById("control-body");
+    let view = "Dashboard",
+      generation = 0;
+    function element(tag, text, className) {
+      const e = document.createElement(tag);
+      if (text != null) e.textContent = text;
+      if (className) e.className = className;
+      return e;
+    }
+    function notice(text, failed = false) {
+      const e = document.getElementById("control-notice");
+      e.textContent = text;
+      e.className = failed ? "problem" : "";
+    }
+    function button(label, work, primary = false) {
+      const b = element("button", label, primary ? "go" : "ghost");
+      b.type = "button";
+      b.onclick = async () => {
+        b.disabled = true;
+        try {
+          await work();
+        } catch (e) {
+          notice(e.message, true);
+        } finally {
+          b.disabled = false;
+        }
+      };
+      return b;
+    }
+    async function call(path, value) {
+      return api(
+        "/api/control/" + path,
+        value === undefined
+          ? undefined
+          : {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(value),
+            },
+      );
+    }
+    function field(parent, label, tag = "input", value = "") {
+      const id = "control-field-" + crypto.randomUUID();
+      const l = element("label", label);
+      l.htmlFor = id;
+      const e = element(tag);
+      e.id = id;
+      e.value = value;
+      parent.append(l, e);
+      return e;
+    }
+    function data(value) {
+      const p = element("pre", JSON.stringify(value, null, 2));
+      body.append(p);
+    }
+    function rows(actions) {
+      if (!actions.length) {
+        body.append(
+          element(
+            "p",
+            "No actions here yet. Request an action or preview a workflow to get started.",
+          ),
+        );
+        return;
+      }
+      for (const a of [...actions].reverse()) {
+        const row = element("div", null, "action-row");
+        const summary = element("div");
+        summary.append(
+          button(
+            a.request.type +
+              " · " +
+              (a.target?.name ? "#" + a.target.name : a.target?.id || a.request.workspace),
+            () => inspect(a.id),
+          ),
+          element(
+            "p",
+            a.actor.source + ": " + a.actor.id + " · " + new Date(a.createdAt).toLocaleString(),
+          ),
+        );
+        row.append(summary, element("span", a.status, "badge"));
+        body.append(row);
+      }
+    }
+    async function inspect(id) {
+      const a = await call("actions/" + id);
+      body.replaceChildren();
+      body.append(button("Back to " + view, refresh));
+      const detail = element("article", null, "detail");
+      body.append(detail);
+      detail.append(
+        element("h2", a.request.type),
+        element("p", a.status, "badge"),
+        element("p", "Requested by " + a.actor.source + ": " + a.actor.id),
+        element("p", "Workspace: " + a.request.workspace),
+        element(
+          "p",
+          "Destination: " + (a.target?.name ? "#" + a.target.name : a.target?.id || "Workspace"),
+        ),
+        element("p", "Policy: " + (a.decision?.reason || "Not evaluated")),
+      );
+      if (a.approval)
+        detail.append(
+          element("p", "Approval expires: " + new Date(a.approval.expiresAt).toLocaleString()),
+        );
+      if (a.status === "PENDING_APPROVAL") {
+        let text;
+        if (typeof a.request.parameters.text === "string")
+          text = field(detail, "Message content", "textarea", a.request.parameters.text);
+        else detail.append(element("pre", JSON.stringify(a.request.parameters, null, 2)));
+        const controls = element("div", null, "controls");
+        detail.append(controls);
+        if (text)
+          controls.append(
+            button("Save edit", async () => {
+              await call("actions/" + id + "/edit", { revision: a.revision, text: text.value });
+              notice("Edit saved. Review the new revision before approval.");
+              await inspect(id);
+            }),
+          );
+        controls.append(
+          button("Reject", async () => {
+            await call("actions/" + id + "/reject", { revision: a.revision });
+            notice("Action rejected.");
+            await inspect(id);
+          }),
+        );
+        controls.append(
+          button(
+            "Approve and execute",
+            async () => {
+              if (text && text.value !== a.request.parameters.text)
+                throw new Error("Save your edit before approving.");
+              const result = await call("actions/" + id + "/approve", { revision: a.revision });
+              notice("Action " + result.status.toLowerCase() + ".");
+              await inspect(id);
+            },
+            true,
+          ),
+        );
+      } else detail.append(element("pre", JSON.stringify(a.request.parameters, null, 2)));
+      if (a.error) detail.append(element("p", a.error, "problem"));
+      if (a.result) detail.append(element("pre", JSON.stringify(a.result, null, 2)));
+      const events = (await call("activity")).filter((e) => e.actionId === id);
+      detail.append(element("h2", "Activity"));
+      for (const e of events)
+        detail.append(
+          element(
+            "p",
+            new Date(e.timestamp).toLocaleTimeString() +
+              " · " +
+              e.event +
+              " · " +
+              e.status +
+              " · " +
+              e.actor.id,
+          ),
+        );
+    }
+    function compose(type = "message.send") {
+      body.append(
+        element("h2", type === "draft.create" ? "Create a Slack draft" : "Request an action"),
+      );
+      const workspace = field(body, "Workspace URL", "input", state.session?.workspace_url || "");
+      const target = field(body, "Channel or existing DM", "input", "#engineering");
+      const text = field(body, "Message", "textarea");
+      const input = () => ({
+        type,
+        workspace: workspace.value,
+        target: target.value,
+        parameters: { text: text.value },
+        key: crypto.randomUUID(),
+      });
+      const controls = element("div", null, "controls");
+      controls.append(
+        button("Preview policy", async () => {
+          const p = await call("preview", input());
+          notice(p.action.decision.effect + ": " + p.action.decision.reason);
+        }),
+      );
+      controls.append(
+        button(
+          type === "draft.create" ? "Create draft" : "Request action",
+          async () => {
+            const a = await call("actions", input());
+            notice("Action " + a.status.toLowerCase() + ".");
+            await inspect(a.id);
+          },
+          true,
+        ),
+      );
+      body.append(controls);
+    }
+    function workflows() {
+      body.append(
+        element(
+          "p",
+          "Preview a deterministic workflow before running it. Reuse the run key to resume after approval. A new run key creates a new execution.",
+        ),
+      );
+      const json = field(
+        body,
+        "Workflow JSON",
+        "textarea",
+        JSON.stringify(
+          {
+            id: "deployment-alert",
+            context: { failed: true },
+            steps: [
+              {
+                id: "notify",
+                when: { field: "failed", equals: true },
+                action: {
+                  type: "message.send",
+                  workspace: state.session?.workspace_url || "https://example.slack.com",
+                  target: "#engineering",
+                  parameters: { text: "Production deployment failed. Investigating." },
+                },
+              },
+            ],
+          },
+          null,
+          2,
+        ),
+      );
+      const key = field(body, "Run key", "input", crypto.randomUUID());
+      const controls = element("div", null, "controls");
+      body.append(controls);
+      const result = element("pre");
+      for (const dryRun of [true, false])
+        controls.append(
+          button(
+            dryRun ? "Preview workflow" : "Run or resume",
+            async () => {
+              result.textContent = JSON.stringify(
+                await call("workflow", { plan: JSON.parse(json.value), runKey: key.value, dryRun }),
+                null,
+                2,
+              );
+            },
+            !dryRun,
+          ),
+        );
+      body.append(result);
+      body.append(element("h2", "Plan a notification"));
+      const intent = field(
+        body,
+        "Intent",
+        "input",
+        "Notify engineering about the deployment failure.",
+      );
+      const destination = field(body, "Explicit channel", "input", "#engineering");
+      const message = field(body, "Proposed content", "textarea");
+      body.append(
+        button("Review plan", async () => {
+          const p = await call("plan", {
+            intent: intent.value,
+            workspace: state.session?.workspace_url || "https://example.slack.com",
+            channel: destination.value,
+            message: message.value,
+          });
+          if (p.plan) json.value = JSON.stringify(p.plan, null, 2);
+          notice(p.status + ": " + p.missing.join(" "));
+        }),
+      );
+    }
+    async function settings() {
+      body.append(
+        element(
+          "p",
+          "Local human sessions expire after one hour. Agent sessions are limited to one workspace, cannot approve actions, and expire within one hour. Keep agents isolated from this operator UI and your OS credentials.",
+        ),
+      );
+      const actor = field(body, "Agent name", "input", "deployment-agent");
+      const workspace = field(body, "Agent workspace", "input", state.session?.workspace_url || "");
+      body.append(
+        button("Create 15-minute agent session", async () => {
+          const session = await call("agent-session", {
+            actorId: actor.value,
+            workspace: workspace.value,
+            ttlMinutes: 15,
+          });
+          const result = element("textarea");
+          result.readOnly = true;
+          result.setAttribute("aria-label", "Agent session token");
+          result.value = session.token;
+          body.append(
+            element(
+              "p",
+              "Copy this session token into the isolated agent. It is held in memory only.",
+            ),
+            result,
+          );
+        }),
+      );
+    }
+    async function refresh() {
+      const request = ++generation;
+      notice("");
+      body.replaceChildren(element("p", "Loading…"));
+      try {
+        const actions = await call("actions");
+        if (request !== generation) return;
+        body.replaceChildren();
+        if (view === "Dashboard") {
+          const summary = element("div", null, "summary");
+          for (const [label, list] of [
+            ["Pending approval", actions.filter((a) => a.status === "PENDING_APPROVAL")],
+            [
+              "Failed or uncertain",
+              actions.filter((a) => ["FAILED", "UNCERTAIN", "EXECUTING"].includes(a.status)),
+            ],
+            ["Policy denials", actions.filter((a) => a.status === "DENIED")],
+            ["Scheduled requests", actions.filter((a) => a.request.type === "message.schedule")],
+          ]) {
+            const cell = element("div");
+            cell.append(element("strong", String(list.length)), element("span", label));
+            summary.append(cell);
+          }
+          body.append(
+            summary,
+            element(
+              "p",
+              "Workspace: " +
+                (state.session?.workspace_url || "Check Settings or Doctor for connection status."),
+            ),
+            element("h2", "Recent actions"),
+          );
+          rows(actions.slice(-10));
+        } else if (view === "Actions") {
+          rows(actions);
+          compose();
+        } else if (view === "Approvals")
+          rows(actions.filter((a) => a.status === "PENDING_APPROVAL"));
+        else if (view === "Drafts") {
+          rows(actions.filter((a) => a.request.type === "draft.create"));
+          compose("draft.create");
+          body.append(element("h2", "Drafts in Slack"));
+          data(await call("drafts"));
+        } else if (view === "Scheduled") {
+          body.append(
+            element(
+              "p",
+              "Scheduled requests made through Slacki. Use message scheduled list in the CLI to inspect Slack’s current delivery queue.",
+            ),
+          );
+          rows(actions.filter((a) => a.request.type === "message.schedule"));
+          body.append(element("h2", "Delivery queue in Slack"));
+          data(await call("scheduled"));
+        } else if (view === "Activity") data(await call("activity"));
+        else if (view === "Policies") {
+          body.append(
+            element(
+              "p",
+              "Safe mode blocks mutations. Deny rules take precedence over approval rules, then explicit grants. By default, automated writes require review and destructive agent actions are denied. Policy configuration is managed by the local operator.",
+            ),
+          );
+          data(await call("policy"));
+        } else if (view === "Workflows") workflows();
+        else if (view === "Settings") await settings();
+      } catch (e) {
+        if (request === generation) {
+          body.replaceChildren();
+          notice(e.message, true);
+        }
+      }
+    }
+    function show(name) {
+      view = name;
+      document.getElementById("shell").hidden = true;
+      panel.hidden = false;
+      document.getElementById("control-title").textContent = name;
+      for (const b of nav.querySelectorAll("button")) {
+        const active = b.dataset.control === name;
+        b.classList.toggle("active", active);
+        if (active) b.setAttribute("aria-current", "page");
+        else b.removeAttribute("aria-current");
+      }
+      refresh();
+    }
+    for (const name of views) {
+      const b = element("button", name);
+      b.type = "button";
+      b.dataset.control = name;
+      b.onclick = () => show(name);
+      nav.append(b);
+    }
+    nav.addEventListener(
+      "click",
+      (e) => {
+        if (e.target.closest("button[data-view]")) {
+          generation++;
+          panel.hidden = true;
+          document.getElementById("shell").hidden = false;
+        }
+      },
+      true,
+    );
+    const messageNav = nav.querySelector('[data-view="channels"]');
+    if (messageNav) messageNav.textContent = "Messages";
+    const order = [
+      "Dashboard",
+      "Actions",
+      "Approvals",
+      "channels",
+      "search",
+      "Drafts",
+      "Scheduled",
+      "Workflows",
+      "Activity",
+      "Policies",
+      "Settings",
+      "inbox",
+      "later",
+      "doctor",
+    ];
+    for (const name of order) {
+      const item = [...nav.querySelectorAll("button")].find(
+        (b) => b.dataset.control === name || b.dataset.view === name,
+      );
+      if (item) nav.append(item);
+    }
+    document.getElementById("control-refresh").onclick = refresh;
+    // Existing message tools stay intact; operations are the landing surface.
+    if (CONFIG.authenticated) show("Dashboard");
+    else {
+      document.getElementById("shell").hidden = true;
+      panel.hidden = false;
+      document.getElementById("control-title").textContent = "Unlock Slacki";
+      document.getElementById("control-subtitle").textContent =
+        "Enter the operator code from the private file shown by slacki ui in your terminal.";
+      nav.hidden = true;
+      const code = field(body, "Operator code");
+      code.type = "password";
+      code.autocomplete = "off";
+      body.append(
+        button(
+          "Unlock",
+          async () => {
+            const response = await fetch("/api/unlock", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ code: code.value }),
+            });
+            if (!response.ok)
+              throw new Error(
+                "Invalid or expired operator code. Restart slacki ui to create a new session.",
+              );
+            location.reload();
+          },
+          true,
+        ),
+      );
+    }
+  })();
+</script>

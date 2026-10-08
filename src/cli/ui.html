@@ -4,375 +4,715 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>slacki</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap"
-      rel="stylesheet"
-    />
     <style>
+      /* Slacki design system: semantic tokens, shared controls, responsive workspace. */
       :root {
-        --void: #11151c;
-        --panel: #181e28;
-        --tape: #1c2430;
-        --rule: #2c3648;
-        --voice: #e8eef6;
-        --quiet: #8a97ad;
-        --ping: #e6a23c;
-        --ok: #5b8f7a;
-        --danger: #c45c4a;
-        --focus: #7eb0d6;
+        color-scheme: light;
+        --canvas: #f5f6f8;
+        --surface: #ffffff;
+        --subtle: #eef0f4;
+        --text: #202631;
+        --muted: #657084;
+        --border: #e1e5eb;
+        --accent: #5054c7;
+        --accent-soft: #eeedfc;
+        --accent-text: #4445ac;
+        --success: #237354;
+        --danger: #b33844;
+        --warning: #966014;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 16px;
+        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --canvas: #191b23;
+        --surface: #20232d;
+        --subtle: #2a2e3b;
+        --text: #e9ebf3;
+        --muted: #a4adc0;
+        --border: #343949;
+        --accent: #a5a4ff;
+        --accent-soft: #323152;
+        --accent-text: #c2c0ff;
+        --success: #7dd9ac;
+        --danger: #ff99a4;
+        --warning: #ebc07c;
       }
       * {
         box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+      }
+      [hidden] {
+        display: none !important;
       }
       html,
       body {
         height: 100%;
+        margin: 0;
       }
       body {
-        background: var(--void);
-        color: var(--voice);
-        font-family: "Source Sans 3", sans-serif;
+        background: var(--canvas);
+        color: var(--text);
+        font: 14px/1.5 var(--font);
         display: grid;
-        grid-template-rows: auto 1fr;
+        grid-template-columns: 208px minmax(0, 1fr);
       }
       button,
+      input,
       textarea {
         font: inherit;
         color: inherit;
       }
       button {
         cursor: pointer;
-        background: none;
         border: 0;
+        background: none;
+      }
+      button,
+      input,
+      textarea {
+        border-radius: var(--radius-sm);
+      }
+      button {
+        transition:
+          background 120ms,
+          color 120ms;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
       }
       :focus-visible {
-        outline: 2px solid var(--focus);
-        outline-offset: 2px;
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
       }
       .top {
         display: flex;
+        flex-direction: column;
+        padding: 28px 14px 16px;
+        border-right: 1px solid var(--border);
+        gap: 28px;
+        min-width: 0;
+      }
+      .brand {
+        display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 12px 20px;
-        border-bottom: 1px solid var(--rule);
-        flex-wrap: wrap;
+        gap: 10px;
+        padding: 0 12px;
+      }
+      .brand-icon {
+        display: grid;
+        place-items: center;
+        background: var(--accent);
+        color: var(--surface);
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        font-size: 22px;
+        font-weight: 700;
       }
       .mark {
-        font-family: "Bricolage Grotesque", sans-serif;
-        font-weight: 700;
-        font-size: 22px;
-        letter-spacing: -0.04em;
+        font-size: 25px;
+        font-weight: 750;
+        letter-spacing: -1.2px;
+      }
+      .workspace {
+        margin: 0 8px;
+        padding-bottom: 22px;
+        border-bottom: 1px solid var(--border);
+      }
+      .workspace-label {
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 5px;
+      }
+      #workspace-name {
+        font-weight: 600;
+        overflow-wrap: anywhere;
       }
       .nav {
-        display: flex;
-        gap: 4px;
-        flex-wrap: wrap;
+        display: grid;
+        gap: 5px;
       }
       .nav button {
-        padding: 6px 10px;
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 12px;
-        color: var(--quiet);
-        border: 1px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        text-align: left;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .nav button:hover,
+      .ghost:hover {
+        background: var(--subtle);
       }
       .nav button.active {
-        color: var(--voice);
-        border-color: var(--rule);
-        background: var(--panel);
+        color: var(--accent-text);
+        background: var(--accent-soft);
       }
-      .find {
+      .icon {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        vertical-align: middle;
+      }
+      .sidebar-bottom {
+        margin-top: auto;
         display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 6px;
-        padding: 0 8px 12px;
-      }
-      .find input {
-        width: 100%;
-        background: var(--void);
-        border: 1px solid var(--rule);
-        color: var(--voice);
-        font: inherit;
-        padding: 8px 10px;
-      }
-      .report {
-        padding: 16px 20px 32px;
-        overflow: auto;
-      }
-      .report h3 {
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 11px;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--quiet);
-        margin: 16px 0 8px;
-      }
-      .report ul {
-        padding-left: 1.2em;
-        color: var(--voice);
-      }
-      .report li {
-        margin-bottom: 6px;
-      }
-      .report pre {
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 12px;
-        white-space: pre-wrap;
-        word-break: break-word;
-        color: var(--quiet);
+        gap: 14px;
+        padding: 0 8px;
       }
       .meta {
-        font-family: "IBM Plex Mono", monospace;
+        color: var(--muted);
         font-size: 12px;
-        color: var(--quiet);
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
+        overflow-wrap: anywhere;
       }
-      .amber {
-        color: var(--ping);
+      .connection {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .connection::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--success);
       }
       .shell {
         display: grid;
-        grid-template-columns: minmax(240px, 300px) 1fr;
+        grid-template-columns: 310px minmax(0, 1fr);
         min-height: 0;
+        min-width: 0;
       }
       .shell.solo {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
       }
       .queue {
-        border-right: 1px solid var(--rule);
+        border-right: 1px solid var(--border);
         overflow: auto;
-        padding: 12px 10px 24px;
+        background: var(--surface);
       }
-      .queue h2,
-      .tape-head h2 {
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--quiet);
-        padding: 8px 8px 10px;
+      .queue-heading {
+        padding: 28px 24px 20px;
+      }
+      h2 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: -0.5px;
+        font-weight: 650;
+      }
+      .subheading {
+        color: var(--muted);
+        margin: 6px 0 0;
+        font-size: 12px;
+      }
+      #queue {
+        padding: 0 12px 20px;
       }
       .ticket {
+        display: block;
         width: 100%;
         text-align: left;
-        padding: 10px 10px 10px 14px;
-        border-left: 3px solid transparent;
+        padding: 15px 12px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-md);
         margin-bottom: 4px;
-        background: var(--panel);
       }
       .ticket:hover {
-        background: var(--tape);
+        background: var(--canvas);
       }
       .ticket.active {
-        border-left-color: var(--ping);
-        background: var(--tape);
-      }
-      .ticket.mention {
-        border-left-color: var(--ping);
+        background: var(--accent-soft);
+        border-color: color-mix(in srgb, var(--accent) 20%, transparent);
       }
       .ticket-top {
         display: flex;
         justify-content: space-between;
         gap: 8px;
-        font-family: "Bricolage Grotesque", sans-serif;
+        align-items: baseline;
         font-weight: 600;
-        font-size: 15px;
+      }
+      .ticket-top > span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .count {
-        font-family: "IBM Plex Mono", monospace;
         font-size: 11px;
-        color: var(--quiet);
+        color: var(--accent-text);
+        white-space: nowrap;
+      }
+      .mention .count {
+        font-weight: 700;
       }
       .snippet {
-        margin-top: 4px;
-        color: var(--quiet);
+        color: var(--muted);
         font-size: 13px;
+        line-height: 1.5;
+        margin-top: 6px;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
+      .find {
+        display: flex;
+        gap: 6px;
+        padding: 0 24px 18px;
+      }
+      .find input {
+        min-width: 0;
+        width: 100%;
+        background: var(--canvas);
+        border: 1px solid var(--border);
+        padding: 9px 10px;
+      }
       .tape {
         display: grid;
-        grid-template-rows: auto 1fr auto;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        min-width: 0;
         min-height: 0;
-        background: var(--tape);
+        background: var(--surface);
       }
       .tape-head {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid var(--rule);
-        padding-right: 12px;
+        gap: 12px;
+        min-height: 99px;
+        border-bottom: 1px solid var(--border);
+        padding: 20px 32px;
+      }
+      .tape-head h2 {
+        font-size: 17px;
+        overflow-wrap: anywhere;
+      }
+      .head-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
       }
       .msgs {
         overflow: auto;
-        padding: 8px 0 24px;
+        padding: 24px 0;
       }
       .row {
+        position: relative;
         display: grid;
-        grid-template-columns: 108px 1fr;
-        gap: 12px;
-        padding: 10px 20px;
-        border-bottom: 1px solid color-mix(in srgb, var(--rule) 70%, transparent);
+        grid-template-columns: 36px minmax(0, 1fr);
+        column-gap: 12px;
+        padding: 12px 32px;
       }
-      .row.threadable {
-        cursor: pointer;
+      .avatar {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        font-weight: 650;
+        font-size: 12px;
+        border-radius: var(--radius-md);
+        grid-row: 1 / 3;
       }
-      .row.threadable:hover {
-        background: color-mix(in srgb, var(--ping) 6%, transparent);
+      .message-meta {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
       }
       .ts {
-        font-family: "IBM Plex Mono", monospace;
+        color: var(--muted);
         font-size: 11px;
-        color: var(--quiet);
-        padding-top: 3px;
       }
       .who {
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 11px;
-        color: var(--ping);
-        margin-bottom: 4px;
+        font-weight: 650;
+        font-size: 13px;
       }
       .body {
         white-space: pre-wrap;
-        word-break: break-word;
-        font-size: 15px;
-        line-height: 1.45;
+        overflow-wrap: anywhere;
+        font-size: 14px;
+        line-height: 1.65;
+        max-width: 78ch;
       }
       .thread-tag {
+        display: block;
+        color: var(--accent-text);
+        font-size: 12px;
+        padding: 4px 0;
         margin-top: 6px;
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 11px;
-        color: var(--ok);
+      }
+      .thread-tag:hover {
+        text-decoration: underline;
       }
       .composer {
-        border-top: 1px solid var(--rule);
-        padding: 12px 16px 16px;
-        display: grid;
-        gap: 8px;
-        background: var(--panel);
+        margin: 8px 28px 24px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+      }
+      .composer:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+      .composer-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
       }
       textarea {
         width: 100%;
-        min-height: 88px;
+        min-height: 84px;
+        max-height: 220px;
         resize: vertical;
-        background: var(--void);
-        border: 1px solid var(--rule);
-        padding: 10px 12px;
-        border-radius: 0;
+        background: transparent;
+        border: 0;
+        padding: 10px 0;
+        line-height: 1.6;
+      }
+      textarea:focus-visible {
+        outline: none;
+      }
+      textarea::placeholder,
+      input::placeholder {
+        color: var(--muted);
       }
       .actions {
         display: flex;
+        align-items: center;
         gap: 8px;
         flex-wrap: wrap;
       }
       .go,
       .ghost {
-        padding: 8px 14px;
-        font-family: "Bricolage Grotesque", sans-serif;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 8px 12px;
+        font-size: 12px;
         font-weight: 600;
-        font-size: 14px;
+        min-height: 34px;
       }
       .go {
-        background: var(--ok);
-        color: #0c1210;
+        background: var(--accent);
+        color: var(--surface);
       }
-      .go:disabled,
-      .ghost:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
+      .go:hover:not(:disabled) {
+        filter: brightness(0.94);
       }
       .ghost {
-        border: 1px solid var(--rule);
-        color: var(--voice);
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      #send {
+        margin-left: auto;
       }
       .status {
-        font-family: "IBM Plex Mono", monospace;
+        color: var(--muted);
         font-size: 12px;
-        color: var(--quiet);
-        min-height: 1.2em;
+        padding: 0 32px 12px;
+        margin: 0;
+        min-height: 30px;
       }
-      .status.err {
-        color: var(--danger);
-      }
-      .empty,
-      .error-banner {
-        padding: 24px 20px;
-        color: var(--quiet);
-        max-width: 36em;
-      }
+      .status.err,
       .error-banner {
         color: var(--danger);
       }
-      @media (max-width: 760px) {
-        .shell {
-          grid-template-columns: 1fr;
-          grid-template-rows: 38vh 1fr;
+      .empty {
+        color: var(--muted);
+        padding: 16px 12px;
+        font-size: 13px;
+      }
+      .welcome {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 32px;
+      }
+      .welcome-icon {
+        display: grid;
+        place-items: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        margin-bottom: 24px;
+      }
+      .welcome-icon .icon {
+        width: 28px;
+        height: 28px;
+      }
+      .welcome h3 {
+        margin: 0 0 10px;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.7px;
+      }
+      .welcome p {
+        max-width: 35ch;
+        color: var(--muted);
+        margin: 0;
+        line-height: 1.7;
+      }
+      .welcome kbd {
+        font: 11px var(--font);
+        border: 1px solid var(--border);
+        padding: 3px 5px;
+        border-radius: 4px;
+      }
+      .welcome .hint {
+        margin-top: 28px;
+        font-size: 12px;
+      }
+      .report {
+        padding: 8px 32px 32px;
+        max-width: 900px;
+      }
+      .report h3 {
+        font-size: 15px;
+        margin: 20px 0 12px;
+      }
+      .report li {
+        margin-bottom: 8px;
+      }
+      .report pre {
+        font: 12px/1.7 var(--mono);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: var(--canvas);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+      }
+      .error-banner {
+        padding: 24px 32px;
+        overflow-wrap: anywhere;
+      }
+      .amber {
+        color: var(--warning);
+      }
+      .mobile-back {
+        display: none;
+      }
+      @media (max-width: 1100px) {
+        body {
+          grid-template-columns: 176px minmax(0, 1fr);
         }
-        .queue {
-          border-right: 0;
-          border-bottom: 1px solid var(--rule);
+        .shell {
+          grid-template-columns: 270px minmax(0, 1fr);
         }
         .row {
-          grid-template-columns: 1fr;
+          padding-inline: 24px;
+        }
+        .tape-head {
+          padding-inline: 24px;
+        }
+      }
+      @media (max-width: 760px) {
+        body {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-rows: auto minmax(0, 1fr);
+          height: 100dvh;
+        }
+        .top {
+          padding: 12px;
+          gap: 12px;
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .brand {
+          padding: 0 4px;
+        }
+        .mark {
+          font-size: 22px;
+        }
+        .brand-icon {
+          width: 28px;
+          height: 28px;
+        }
+        .workspace,
+        .sidebar-bottom {
+          display: none;
+        }
+        .nav {
+          display: flex;
+          justify-content: space-between;
+          gap: 2px;
+        }
+        .nav button {
+          padding: 8px;
+          gap: 6px;
+          font-size: 12px;
+        }
+        .nav .icon {
+          width: 15px;
+        }
+        .shell {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .tape {
+          display: none;
+        }
+        .shell.conversation-open .queue {
+          display: none;
+        }
+        .shell.conversation-open .tape,
+        .shell.solo .tape {
+          display: grid;
+        }
+        .mobile-back {
+          display: inline-flex;
+        }
+        .tape-head {
+          min-height: 76px;
+          padding: 14px 16px;
+        }
+        .head-actions {
           gap: 4px;
+        }
+        .tape-head h2 {
+          font-size: 15px;
+        }
+        .row {
+          padding: 12px 16px;
+        }
+        .composer {
+          margin: 8px 12px 12px;
+        }
+        .status {
+          padding-inline: 16px;
+        }
+      }
+      @media (max-width: 760px) {
+        .nav {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+        .nav button {
+          flex-direction: column;
+          justify-content: center;
+          padding: 7px 2px;
+          gap: 4px;
+        }
+        .head-actions {
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .tape-head > div:first-child {
+          min-width: 0;
         }
       }
       @media (prefers-reduced-motion: reduce) {
         * {
           transition: none !important;
+          scroll-behavior: auto !important;
         }
       }
     </style>
   </head>
   <body>
     <header class="top">
-      <div class="mark">slacki</div>
-      <nav class="nav" id="nav">
-        <button type="button" data-view="inbox" class="active">Inbox</button>
-        <button type="button" data-view="channels">Channels</button>
-        <button type="button" data-view="search">Search</button>
-        <button type="button" data-view="later">Later</button>
-        <button type="button" data-view="doctor">Doctor</button>
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">s</span>
+        <div class="mark">slacki</div>
+      </div>
+      <div class="workspace">
+        <div class="workspace-label">Your workspace</div>
+        <div id="workspace-name">Connecting…</div>
+      </div>
+      <nav class="nav" id="nav" aria-label="Workspace">
+        <button type="button" data-view="inbox" class="active" aria-current="page">
+          <span data-icon="inbox"></span>Inbox
+        </button>
+        <button type="button" data-view="channels"><span data-icon="hash"></span>Channels</button>
+        <button type="button" data-view="search"><span data-icon="search"></span>Search</button>
+        <button type="button" data-view="later"><span data-icon="bookmark"></span>Later</button>
+        <button type="button" data-view="doctor"><span data-icon="pulse"></span>Doctor</button>
       </nav>
-      <div class="meta" id="meta">connecting…</div>
+      <div class="sidebar-bottom">
+        <button class="ghost" id="theme" type="button">Switch theme</button>
+        <div class="connection">Local workspace</div>
+        <div class="meta" id="meta">Connecting to Slack…</div>
+      </div>
     </header>
     <main class="shell" id="shell">
-      <aside class="queue" id="sidebar">
-        <h2 id="queue-label">Queue</h2>
+      <aside class="queue" id="sidebar" aria-label="Conversations">
+        <div class="queue-heading">
+          <h2 id="queue-label">Inbox</h2>
+          <p class="subheading" id="queue-description">A little less noise. A little more focus.</p>
+        </div>
         <form class="find" id="search-box" hidden>
-          <input id="search-q" type="search" placeholder="Search messages…" autocomplete="off" />
-          <button class="go" type="submit">Go</button>
+          <input
+            id="search-q"
+            aria-label="Search messages"
+            type="search"
+            placeholder="Search your workspace…"
+            autocomplete="off"
+          />
+          <button class="go" type="submit">Search</button>
         </form>
-        <div id="queue"></div>
+        <div id="queue"><p class="empty">Loading conversations…</p></div>
       </aside>
-      <section class="tape">
+      <section class="tape" aria-label="Conversation">
         <div class="tape-head">
-          <h2 id="tape-title">Select a conversation</h2>
-          <button class="ghost" type="button" id="refresh">Refresh</button>
-        </div>
-        <div class="msgs" id="msgs">
-          <p class="empty">
-            Inbox, channels, search, and Later share one tape. Pick something, read it, reply, then
-            mark it read. Sending from here is you, not the agent.
-          </p>
-        </div>
-        <form class="composer" id="composer">
-          <textarea id="draft" placeholder="Reply in this conversation…" disabled></textarea>
-          <div class="actions">
-            <button class="go" type="submit" id="send" disabled>Send</button>
-            <button class="ghost" type="button" id="mark" disabled>Mark read</button>
-            <button class="ghost" type="button" id="later" disabled>Save Later</button>
+          <div>
+            <h2 id="tape-title">Your space to catch up</h2>
+            <p class="subheading" id="tape-description">
+              Stay close to the conversations that matter.
+            </p>
           </div>
-          <p class="status" id="status"></p>
-        </form>
+          <div class="head-actions">
+            <button
+              class="ghost mobile-back"
+              id="back"
+              type="button"
+              aria-label="Back to conversations"
+            >
+              Back</button
+            ><button class="ghost" id="thread-back" type="button" hidden>Conversation</button
+            ><button class="ghost" type="button" id="refresh">
+              <span data-icon="refresh"></span>Refresh
+            </button>
+          </div>
+        </div>
+        <div class="msgs" id="msgs"></div>
+        <div>
+          <form class="composer" id="composer" hidden>
+            <label class="composer-label" for="draft" id="draft-label">Reply to conversation</label>
+            <textarea id="draft" placeholder="Write a thoughtful reply…" disabled></textarea>
+            <div class="actions">
+              <button class="ghost" type="button" id="mark" disabled>
+                <span data-icon="check"></span>Mark read</button
+              ><button class="ghost" type="button" id="later" disabled>
+                <span data-icon="bookmark"></span>Save for later</button
+              ><button class="go" type="submit" id="send" disabled>
+                Send message <span data-icon="send"></span>
+              </button>
+            </div>
+          </form>
+          <p class="status" id="status" role="status" aria-live="polite"></p>
+        </div>
       </section>
     </main>
     <script>
@@ -387,6 +727,68 @@
         mode: "history",
         threadTs: null,
       };
+
+      const paths = {
+        inbox: "M4 4h16v16H4z M4 13h5l2 3h2l2-3h5",
+        hash: "M9 3 7 21 M17 3l-2 18 M3 9h18 M2 15h18",
+        search: "M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
+        bookmark: "M6 3h12v18l-6-4-6 4z",
+        pulse: "M3 12h4l3-8 4 16 3-8h4",
+        refresh: "M20 7v5h-5 M4 17v-5h5 M5 8a8 8 0 0 1 13-3l2 3 M4 16l2 3a8 8 0 0 0 13-3",
+        check: "m5 12 4 4L19 6",
+        send: "m3 3 18 9-18 9 4-9z M7 12h14",
+      };
+      function icon(name) {
+        return (
+          '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' +
+          paths[name] +
+          '"></path></svg>'
+        );
+      }
+      document.querySelectorAll("[data-icon]").forEach((el) => {
+        el.innerHTML = icon(el.dataset.icon);
+      });
+      let savedTheme;
+      try {
+        savedTheme = localStorage.getItem("slacki-theme");
+      } catch {}
+      document.documentElement.dataset.theme =
+        savedTheme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.getElementById("theme").addEventListener("click", () => {
+        const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme;
+        try {
+          localStorage.setItem("slacki-theme", theme);
+        } catch {}
+      });
+      document
+        .getElementById("back")
+        .addEventListener("click", () =>
+          document.getElementById("shell").classList.remove("conversation-open"),
+        );
+      document
+        .getElementById("thread-back")
+        .addEventListener("click", () => openChannel(state.selected));
+      document.addEventListener("keydown", (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+          event.preventDefault();
+          document.querySelector('[data-view="search"]').click();
+          document.getElementById("search-q").focus();
+        }
+      });
+      let messageRequest = 0;
+      let viewRequest = 0;
+      const drafts = new Map();
+      const pendingSends = new Set();
+      function draftKey() {
+        return state.selected ? state.selected.channel_id + ":" + (state.threadTs || "") : "";
+      }
+      function saveDraft() {
+        if (draftKey()) drafts.set(draftKey(), document.getElementById("draft").value);
+      }
+      function restoreDraft() {
+        document.getElementById("draft").value = drafts.get(draftKey()) || "";
+      }
 
       function headers(extra) {
         return { "x-inbox-token": token, ...(extra || {}) };
@@ -434,9 +836,11 @@
 
       function emptyCopy() {
         if (state.view === "channels") return "No conversations returned.";
-        if (state.view === "search") return "Type a query and search.";
-        if (state.view === "later") return "Nothing in Later.";
-        return "No unreads. Refresh — or open Doctor if auth looks wrong.";
+        if (state.view === "search")
+          return "Find a message with a keyword, or try in:channel or from:name.";
+        if (state.view === "later")
+          return "Nothing saved yet. Save a message from a conversation to return to it here.";
+        return "You’re all caught up. Refresh to check for new conversations.";
       }
 
       function renderQueue() {
@@ -466,7 +870,8 @@
             btn.innerHTML =
               '<div class="ticket-top"><span></span><span class="count"></span></div><div class="snippet"></div>';
             btn.querySelector(".ticket-top span").textContent = channelLabel(ch);
-            btn.querySelector(".count").textContent = ch.count || "";
+            btn.setAttribute("aria-pressed", String(btn.classList.contains("active")));
+            btn.querySelector(".count").textContent = ch.count === "0" ? "" : ch.count || "";
             btn.querySelector(".snippet").textContent = lastSnippet(ch);
             btn.addEventListener("click", () => openChannel(ch));
             return btn;
@@ -479,16 +884,27 @@
         const title = document.getElementById("tape-title");
         const msgs = document.getElementById("msgs");
         const ch = state.selected;
-        title.textContent = ch
-          ? channelLabel(ch) + (state.mode === "thread" ? " · thread" : "")
-          : "Select a conversation";
+        title.textContent = ch ? channelLabel(ch) : "Your space to catch up";
+        document.getElementById("tape-description").textContent = ch
+          ? state.mode === "thread"
+            ? "Thread · replies stay in this conversation"
+            : "Conversation history"
+          : "Stay close to the conversations that matter.";
+        document.getElementById("thread-back").hidden = state.mode !== "thread" || !ch;
+        document.getElementById("composer").hidden = !ch;
+        document.getElementById("draft-label").textContent =
+          state.mode === "thread" ? "Reply to thread" : "Message " + channelLabel(ch);
         if (!state.messages.length) {
-          const p = document.createElement("p");
-          p.className = "empty";
-          p.textContent = ch
-            ? "No messages in this slice."
-            : "Pick a conversation, search hit, or Later item. This window is the human — sending from here is you.";
-          msgs.replaceChildren(p);
+          msgs.innerHTML =
+            '<div class="welcome"><div class="welcome-icon">' +
+            icon(ch ? "hash" : "inbox") +
+            '</div><h3></h3><p></p><p class="hint">Search your workspace with <kbd>⌘ / Ctrl K</kbd></p></div>';
+          msgs.querySelector("h3").textContent = ch
+            ? "Start the conversation"
+            : "Make room for what matters.";
+          msgs.querySelector(".welcome > p").textContent = ch
+            ? "No messages here yet. Write the first one below."
+            : "Choose a conversation to catch up, reply, and move on with your day.";
           return;
         }
         msgs.replaceChildren(
@@ -496,11 +912,18 @@
             const row = document.createElement("article");
             const threaded = Boolean(m.thread_ts);
             row.className = "row" + (threaded ? " threadable" : "");
-            const author = (m.author && (m.author.user_id || m.author.bot_id)) || "unknown";
+            const author =
+              (m.author &&
+                (m.author.display_name || m.author.name || m.author.user_id || m.author.bot_id)) ||
+              "Unknown author";
             row.innerHTML =
-              '<div class="ts"></div><div><div class="who"></div><div class="body"></div>' +
-              (m.thread_ts ? '<div class="thread-tag"></div>' : "") +
+              '<div class="avatar" aria-hidden="true"></div><div><div class="message-meta"><span class="who"></span><time class="ts"></time></div><div class="body"></div>' +
+              (m.thread_ts ? '<button type="button" class="thread-tag"></button>' : "") +
               "</div>";
+            row.querySelector(".avatar").textContent = author
+              .replace(/[^a-z0-9]/gi, "")
+              .slice(0, 2)
+              .toUpperCase();
             row.querySelector(".ts").textContent = clock(m.ts);
             row.querySelector(".who").textContent = author;
             row.querySelector(".body").textContent = m.content || "";
@@ -512,7 +935,7 @@
                   : m.ts === m.thread_ts
                     ? "open thread"
                     : "part of a thread — click to open";
-              row.addEventListener("click", () => openThread(ch.channel_id, m.thread_ts || m.ts));
+              tag.addEventListener("click", () => openThread(ch.channel_id, m.thread_ts || m.ts));
             }
             return row;
           }),
@@ -522,15 +945,29 @@
 
       function enableComposer(on) {
         document.getElementById("draft").disabled = !on;
-        document.getElementById("send").disabled = !on;
+        document.getElementById("send").disabled = !on || pendingSends.has(draftKey());
         document.getElementById("mark").disabled = !on;
         document.getElementById("later").disabled = !on;
       }
 
       function setView(view) {
+        saveDraft();
+        messageRequest++;
+        viewRequest++;
         state.view = view;
+        document.getElementById("shell").classList.remove("conversation-open");
+        document.getElementById("thread-back").hidden = true;
+        document.getElementById("queue-description").textContent = {
+          inbox: "A little less noise. A little more focus.",
+          channels: "All your conversations, in one place.",
+          search: "Find the conversation you need.",
+          later: "Pick up where you left off.",
+          doctor: "",
+        }[view];
         document.querySelectorAll("#nav button").forEach((btn) => {
           btn.classList.toggle("active", btn.dataset.view === view);
+          if (btn.dataset.view === view) btn.setAttribute("aria-current", "page");
+          else btn.removeAttribute("aria-current");
         });
         document.getElementById("search-box").hidden = view !== "search";
         document.getElementById("composer").hidden = view === "doctor";
@@ -538,7 +975,7 @@
         document.getElementById("shell").classList.toggle("solo", view === "doctor");
         document.getElementById("queue-label").textContent =
           view === "inbox"
-            ? "Queue"
+            ? "Inbox"
             : view === "channels"
               ? "Channels"
               : view === "search"
@@ -550,17 +987,13 @@
 
       async function loadSession() {
         state.session = await api("/api/session");
-        const bits = [
-          state.session.team || state.session.workspace_url,
-          state.session.user ? "@" + state.session.user : null,
-          state.session.safe_mode ? "safe mode · sending here is still you" : null,
-        ].filter(Boolean);
-        document.getElementById("meta").innerHTML = bits
-          .map((b, i) =>
-            i === bits.length - 1 && state.session.safe_mode
-              ? '<span class="amber">' + b + "</span>"
-              : b,
-          )
+        document.getElementById("workspace-name").textContent =
+          state.session.team || state.session.workspace_url || "Slack workspace";
+        document.getElementById("meta").textContent = [
+          state.session.user ? "@" + state.session.user : "",
+          state.session.safe_mode ? "Safe mode enabled" : "Connected to Slack",
+        ]
+          .filter(Boolean)
           .join(" · ");
       }
 
@@ -575,21 +1008,27 @@
       }
 
       async function loadInbox() {
+        const request = ++viewRequest;
         const data = await api("/api/unreads");
+        if (request !== viewRequest) return;
         state.tickets = (data.channels || []).map(ticketFromChannel);
         document.getElementById("queue-label").textContent =
-          data.source === "recent" ? "Recent" : "Queue";
+          data.source === "recent" ? "Recent conversations" : "Inbox";
         renderQueue();
       }
 
       async function loadChannels() {
+        const request = ++viewRequest;
         const data = await api("/api/channels");
+        if (request !== viewRequest) return;
         state.tickets = (data.channels || []).map(ticketFromChannel);
         renderQueue();
       }
 
       async function loadSearch(query) {
+        const request = ++viewRequest;
         const data = await api("/api/search?q=" + encodeURIComponent(query));
+        if (request !== viewRequest) return;
         state.tickets = (data.messages || []).map((m) => ({
           channel_id: m.channel_id,
           channel_name: m.channel_id,
@@ -602,7 +1041,9 @@
       }
 
       async function loadLater() {
+        const request = ++viewRequest;
         const data = await api("/api/later");
+        if (request !== viewRequest) return;
         state.tickets = (data.items || []).map((item) => ({
           channel_id: item.channel_id,
           channel_name: item.channel_name,
@@ -646,8 +1087,9 @@
       }
 
       async function loadDoctor() {
+        const request = ++viewRequest;
         const report = await api("/api/doctor");
-        renderDoctor(report);
+        if (request === viewRequest) renderDoctor(report);
       }
 
       async function loadView() {
@@ -655,30 +1097,53 @@
         else if (state.view === "channels") await loadChannels();
         else if (state.view === "later") await loadLater();
         else if (state.view === "doctor") await loadDoctor();
-        else renderQueue();
+        else {
+          const query = document.getElementById("search-q").value.trim();
+          if (query) await loadSearch(query);
+          else renderQueue();
+        }
       }
 
       async function openChannel(ch) {
+        if (!ch) return;
+        saveDraft();
+        const request = ++messageRequest;
         state.selected = ch;
+        state.messages = [];
+        document.getElementById("shell").classList.add("conversation-open");
         state.mode = "history";
         state.threadTs = null;
-        enableComposer(true);
+        restoreDraft();
+        enableComposer(false);
         renderQueue();
-        setStatus("loading tape…");
+        renderTape();
+        document.getElementById("msgs").innerHTML = '<p class="empty">Loading conversation…</p>';
+        setStatus("Loading conversation…");
         try {
           const data = await api("/api/history?channel=" + encodeURIComponent(ch.channel_id));
+          if (request !== messageRequest) return;
           state.messages = data.messages || [];
+          enableComposer(true);
           renderTape();
           setStatus("");
         } catch (err) {
+          if (request !== messageRequest) return;
+          document.getElementById("msgs").innerHTML =
+            '<p class="error-banner">Could not load messages. Use Refresh to try again.</p>';
           setStatus(String(err.message || err), true);
         }
       }
 
       async function openThread(channelId, ts) {
+        saveDraft();
+        const request = ++messageRequest;
+        enableComposer(false);
         state.mode = "thread";
         state.threadTs = ts;
-        setStatus("loading thread…");
+        restoreDraft();
+        renderTape();
+        document.getElementById("msgs").innerHTML = '<p class="empty">Loading thread…</p>';
+        setStatus("Loading thread…");
         try {
           const data = await api(
             "/api/thread?channel=" +
@@ -686,10 +1151,15 @@
               "&ts=" +
               encodeURIComponent(ts),
           );
+          if (request !== messageRequest) return;
           state.messages = data.messages || [];
+          enableComposer(true);
           renderTape();
           setStatus("replying in thread");
         } catch (err) {
+          if (request !== messageRequest) return;
+          document.getElementById("msgs").innerHTML =
+            '<p class="error-banner">Could not load messages. Use Refresh to try again.</p>';
           setStatus(String(err.message || err), true);
         }
       }
@@ -699,9 +1169,14 @@
         if (!btn) return;
         setView(btn.dataset.view);
         state.tickets = [];
+        renderQueue();
         state.messages = [];
+        state.selected = null;
+        state.threadTs = null;
+        if (state.view === "doctor")
+          document.getElementById("msgs").innerHTML =
+            '<p class="empty">Checking your connection…</p>';
         if (state.view !== "doctor") {
-          state.selected = null;
           enableComposer(false);
           renderTape();
         }
@@ -731,7 +1206,8 @@
         try {
           await loadView();
           if (state.selected && state.view !== "doctor") {
-            await openChannel(state.selected);
+            if (state.threadTs) await openThread(state.selected.channel_id, state.threadTs);
+            else await openChannel(state.selected);
           }
           setStatus("");
         } catch (err) {
@@ -742,30 +1218,35 @@
       document.getElementById("composer").addEventListener("submit", async (event) => {
         event.preventDefault();
         const text = document.getElementById("draft").value;
-        if (!state.selected || !text.trim()) return;
+        if (!state.selected || !text.trim() || pendingSends.has(draftKey())) return;
+        const key = draftKey();
+        const channel = state.selected;
+        const threadTs = state.threadTs;
+        pendingSends.add(key);
         document.getElementById("send").disabled = true;
-        setStatus("sending…");
+        setStatus("Sending…");
         try {
           await api("/api/reply", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              channel: state.selected.channel_id,
+              channel: channel.channel_id,
               text,
-              thread_ts: state.threadTs || undefined,
+              thread_ts: threadTs || undefined,
             }),
           });
-          document.getElementById("draft").value = "";
-          if (state.threadTs) {
-            await openThread(state.selected.channel_id, state.threadTs);
-          } else {
-            await openChannel(state.selected);
-          }
-          setStatus("sent");
+          if (drafts.get(key) === text) drafts.delete(key);
+          if (draftKey() !== key) return;
+          if (document.getElementById("draft").value === text)
+            document.getElementById("draft").value = "";
+          if (threadTs) await openThread(channel.channel_id, threadTs);
+          else await openChannel(channel);
+          setStatus("Message sent");
         } catch (err) {
-          setStatus(String(err.message || err), true);
+          if (draftKey() === key) setStatus(String(err.message || err), true);
         } finally {
-          enableComposer(Boolean(state.selected));
+          pendingSends.delete(key);
+          if (draftKey() === key) enableComposer(Boolean(state.selected));
         }
       });
 
@@ -802,12 +1283,17 @@
         }
       });
 
+      renderTape();
       (async () => {
+        if (!CONFIG.authenticated) return;
         try {
           await loadSession();
           await loadInbox();
         } catch (err) {
-          document.getElementById("meta").textContent = "could not connect";
+          document.getElementById("meta").textContent = "Could not connect";
+          document.getElementById("workspace-name").textContent = "Connection unavailable";
+          document.getElementById("queue").innerHTML =
+            '<p class="error-banner">Could not connect to Slack. Open Doctor to check your session.</p>';
           document.getElementById("msgs").innerHTML = '<p class="error-banner"></p>';
           document.querySelector(".error-banner").textContent = String(err.message || err);
         }
