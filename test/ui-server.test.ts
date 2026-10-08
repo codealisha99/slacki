@@ -175,7 +175,8 @@ describe("inbox UI server", () => {
     await boot();
     const html = await fetch(`${running!.url}/`).then((r) => r.text());
     expect(html).toContain("Inbox");
-    expect(html).toContain(running!.token);
+    expect(html).not.toContain(running!.token);
+    expect(html).toContain("Unlock Slacki");
 
     const unauthorized = await fetch(`${running!.url}/api/reply`, {
       method: "POST",
