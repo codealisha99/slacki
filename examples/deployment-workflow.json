@@ -1,0 +1,16 @@
+{
+  "id": "deployment-alert",
+  "context": { "failed": true },
+  "steps": [
+    {
+      "id": "notify",
+      "when": { "field": "failed", "equals": true },
+      "action": {
+        "type": "message.send",
+        "workspace": "https://example.slack.com",
+        "target": "#engineering",
+        "parameters": { "text": "Production deployment failed. Engineering is investigating." }
+      }
+    }
+  ]
+}

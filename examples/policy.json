@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "approvalTtlMs": 3600000,
+  "rules": [
+    {
+      "id": "protect-general",
+      "effect": "REQUIRE_APPROVAL",
+      "reason": "Announcements in general require review.",
+      "targets": ["#general"]
+    },
+    {
+      "id": "no-agent-deletion",
+      "effect": "DENY",
+      "reason": "Agents must not delete messages.",
+      "sources": ["AI_AGENT"],
+      "types": ["message.delete"]
+    }
+  ]
+}

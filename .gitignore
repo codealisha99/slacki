@@ -39,3 +39,7 @@ design-docs/
 
 # context artifacts
 .context/
+
+# browser test output
+playwright-report/
+test-results/
