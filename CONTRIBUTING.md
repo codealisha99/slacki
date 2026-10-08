@@ -43,3 +43,18 @@ Run via Bun directly (for local development):
 ```bash
 bun ./bin/slacki.bun.js --help
 ```
+
+## Control-plane changes
+
+See [CONTROL_PLANE.md](docs/CONTROL_PLANE.md) for action/policy/approval contracts.
+Extend strict action schemas and the shared execution adapter together. Never add
+agent API passthrough to arbitrary Slack methods. Keep actor binding server-side,
+revision checks and policy re-evaluation intact. Test concurrent review and
+uncertain mutation outcomes when changing execution. Do not retry mutations merely
+because a request timed out.
+
+Run `bun test`, `bun run typecheck`, `bun run lint`, `bun run format:check`, and
+both builds. `bun scripts/mock-control.ts` is an explicitly mocked browser backend.
+Live tests are separate and disabled by default; see the operating guide. Never
+use a real workspace for automated write/UI fixtures. Keep the installable skill
+aligned without duplicating CLI help.

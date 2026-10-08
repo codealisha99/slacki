@@ -21,7 +21,7 @@ If a capability named here is absent from installed help, report version skew in
 - Perform write actions only when explicitly requested: sends, edits, deletes, reactions, invitations, channel or canvas creation, mark-read operations, scheduling or canceling delivery, uploads, Later state/reminder changes, DM/group-DM creation, and `workflow run`. Workflow runs can execute downstream actions.
 - For compose- or review-only requests, return proposed text without invoking Slack, or use `message draft create` to add a Slack-native draft the user can review and send (nothing is posted). `message compose` is send-capable; use it only when the user explicitly asks to open the interactive editor. In CI or another noninteractive environment, do not invoke it without separate authorization to send immediately: CI skips the editor and sends supplied text.
 - With `SLACKI_SAFE_MODE=1` (or the global `--safe-mode` flag) set, safe mode is enforced at the tool level: `message send` is redirected to the draft editor; Slack-native drafts stay allowed; every other Slack mutation is blocked. Use `slacki doctor` to see whether it is on.
-- `slacki ui` opens a local web app (inbox, channels, search, Later, doctor). Do not launch it unless the user asks for the interactive UI. Sending from that window is the user.
+- `slacki ui` opens a local web app (inbox, channels, search, Later, doctor). Do not launch it unless the user asks for the interactive UI. Controlled sends from that window still pass policy. Unsent UI text is page-local, not a Slack-native draft; reloading discards it.
 
 ## Workflow
 
@@ -43,3 +43,12 @@ Slack-native drafts (`message draft list|create|update|delete`) manage drafts th
 
 - Read [references/targets.md](references/targets.md) only when choosing between a message URL, channel, or user target, or when resolving multiple workspaces.
 - Read [references/output.md](references/output.md) only when handling returned message or canvas metadata, resolved users, or downloaded and failed attachments.
+
+## Controlled automation
+
+- Prefer `action request` or a scoped agent HTTP session for automated writes. Requests default to AI_AGENT; do not use `--human` or operator review commands to grant yourself authority.
+- Inspect installed help before constructing JSON. Requests require an explicit Slack workspace origin; unknown fields and caller-supplied approval state are rejected. Use a stable idempotency key per intended action.
+- Preview with `--dry-run`; context may read Slack, but no mutation occurs. PENDING_APPROVAL means stop and return the action ID to a human. Never approve your own request.
+- After timeout/UNCERTAIN or interrupted EXECUTING, inspect the action and Slack before requesting a replacement. Do not change the key to force a resend.
+- Local `automation run` is distinct from Slack-native `workflow run`. Resume with the identical plan/context/run key after human approval. Do not invent channel/team mappings or timezone conversions.
+- The unrestricted local CLI remains an operator interface; some legacy administrative writes are not yet in the action lifecycle. Do not use those paths to bypass a pending/denied controlled action. Agent isolation requires a scoped HTTP tool with no access to operator credentials, CLI or filesystem.

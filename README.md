@@ -4,7 +4,9 @@
 
 # slacki
 
-Slack automation CLI for AI agents (TypeScript + Bun).
+Slacki is a control and automation layer for Slack, built on the existing TypeScript/Bun CLI. Humans, scripts and isolated agents can request structured actions, inspect policy decisions and review approvals before execution.
+
+The local control center adds Actions, Approvals, Workflows and Activity alongside the existing Slack tools. See [operating the control plane](docs/CONTROL_PLANE.md) for policy, agent sessions, persistence, dry runs and exact commands, and [implementation status](docs/IMPLEMENTATION_REPORT.md) for verification and remaining work. Live Slack mutation behavior is not comprehensively verified.
 
 Guiding principle:
 
@@ -186,7 +188,11 @@ slacki ui
 slacki ui --no-open --port 8787
 ```
 
-Sends from that window are you, even if safe mode is on. Stop with Ctrl+C.
+The responsive workspace includes light and dark themes, keyboard search (`⌘/Ctrl+K`), and thread navigation. Unsent text is kept separately for each conversation and thread while the page stays open; reloading clears it. These local buffers are not Slack-native drafts.
+
+Unlock the UI using the private operator-code file printed by the command. Controlled sends use the shared policy engine, including safe mode, and may require approval. Stop with Ctrl+C.
+
+See [the UI design system](docs/design-system.md) for tokens, component conventions, and layout guidance.
 
 ## Targets: URL or channel
 
