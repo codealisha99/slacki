@@ -1,3 +1,4 @@
+import { recordRateLimit } from "../lib/slack-telemetry.ts";
 import { WebClient } from "@slack/web-api";
 import { getUserAgent } from "../lib/version.ts";
 
@@ -148,9 +149,13 @@ export class SlackApiClient {
 
     if (response.status === 429 && attempt < 3) {
       const retryAfter = Number(response.headers.get("Retry-After") ?? "5");
-      const delayMs = Math.min(Math.max(retryAfter, 1) * 1000, 30000);
+      const delayMs =
+        Number.isFinite(retryAfter) && retryAfter >= 0
+          ? Math.max(retryAfter, 1) * 1000
+          : Number.POSITIVE_INFINITY;
       const maxWaitMs = getSlackRateLimitMaxWaitMs();
-      if (delayMs > maxWaitMs) {
+      recordRateLimit(delayMs <= maxWaitMs && delayMs <= 2_147_483_647);
+      if (delayMs > maxWaitMs || delayMs > 2_147_483_647) {
         throw slackRateLimitError({ method: input.method, retryAfterSec: retryAfter, maxWaitMs });
       }
       await new Promise((r) => setTimeout(r, delayMs));
@@ -238,9 +243,13 @@ export class SlackApiClient {
 
     if (response.status === 429 && attempt < 3) {
       const retryAfter = Number(response.headers.get("Retry-After") ?? "5");
-      const delayMs = Math.min(Math.max(retryAfter, 1) * 1000, 30000);
+      const delayMs =
+        Number.isFinite(retryAfter) && retryAfter >= 0
+          ? Math.max(retryAfter, 1) * 1000
+          : Number.POSITIVE_INFINITY;
       const maxWaitMs = getSlackRateLimitMaxWaitMs();
-      if (delayMs > maxWaitMs) {
+      recordRateLimit(delayMs <= maxWaitMs && delayMs <= 2_147_483_647);
+      if (delayMs > maxWaitMs || delayMs > 2_147_483_647) {
         throw slackRateLimitError({ method: input.method, retryAfterSec: retryAfter, maxWaitMs });
       }
       await new Promise((r) => setTimeout(r, delayMs));

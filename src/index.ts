@@ -1,3 +1,4 @@
+import { registerActionCommand } from "./cli/action-command.ts";
 import { Command } from "commander";
 import { getPackageVersion } from "./lib/version.ts";
 import { createCliContext } from "./cli/context.ts";
@@ -75,6 +76,7 @@ program
 startCommandWatchdog(process.argv.slice(2));
 
 const ctx = createCliContext();
+registerActionCommand({ program, ctx });
 
 registerAuthCommand({ program, ctx });
 registerDoctorCommand({ program, ctx });
