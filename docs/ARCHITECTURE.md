@@ -1,6 +1,6 @@
 # slacki — architecture and testing
 
-slacki is a Slack CLI for agents. Commands print compact JSON. A local browser app (`slacki ui`) sits on the same Slack session. Nothing in this repo is a hosted Slack website.
+slacki is a control and automation layer for Slack with a compatible CLI. Commands print compact JSON. A local browser app (`slacki ui`) sits on the same Slack session. Nothing in this repo is a hosted Slack website.
 
 Run from the repo:
 
@@ -12,6 +12,23 @@ bun run src/index.ts --help
 Treat `slacki --help` and each subcommand’s help as the source of truth for flags.
 
 ---
+
+## Shared control services
+
+New paths: CLI action/automation commands and UI control routes → `core/service.ts`
+→ exact workspace/target context → reusable policy → durable approval/execution
+claim → `core/slack-execution.ts` → existing SlackApiClient → Slack.
+
+`core/legacy-bridge.ts` adapts production message writes from existing CLI/UI
+helpers into the same service while preserving successful Slack receipts.
+`core/store.ts` persists actions and append-only lifecycle events together;
+`core/workflow.ts` sequences validated steps and pauses for approval.
+`core/planner.ts` only constructs bounded notification plans. Agent identity is
+assigned by scoped server sessions, not trusted JSON fields.
+
+See [control-plane boundaries and operation](CONTROL_PLANE.md) for the exact
+capability migration boundary, trust model, idempotency and recovery limitations.
+The existing domain modules and credential imports below remain in place.
 
 ## What the code is
 
@@ -117,7 +134,7 @@ Env wins when `SLACK_TOKEN` is set. Otherwise the resolver loads `~/.config/slac
 
 **Workspace pick.** Channel _names_ (`#general`) are ambiguous if several workspaces are stored. Pass `--workspace`, set `SLACK_WORKSPACE_URL`, or run `auth set-default`. Channel _ids_ (`C…` / `D…` / `G…`) and message URLs do not need that.
 
-**Safe mode.** `--safe-mode` or `SLACKI_SAFE_MODE=1` redirects `message send` to the draft editor and blocks the mutation list in `SAFE_MODE_BLOCKED_COMMANDS` (`src/cli/safe-mode.ts`). Slack-native drafts stay allowed (they post nothing). The local web app is a human surface: sending from that window is the user, even if safe mode is on.
+**Safe mode.** `--safe-mode` or `SLACKI_SAFE_MODE=1` redirects `message send` to the draft editor and blocks the mutation list in `SAFE_MODE_BLOCKED_COMMANDS` (`src/cli/safe-mode.ts`). Slack-native drafts stay allowed (they post nothing). The controlled execution service also enforces safe mode; the local web app cannot use approval to override it.
 
 **Secrets.** Doctor and error paths redact `xox*` tokens. Do not log `credentials.json` or keychain blobs.
 
@@ -127,7 +144,7 @@ Env wins when `SLACK_TOKEN` is set. Otherwise the resolver loads `~/.config/slac
 
 Not a hosted product. `startInboxUi` in `src/cli/ui-server.ts` binds **127.0.0.1 only** (default port **8787**). Open `http://127.0.0.1:8787` — `http://127.0.0.1/` is port 80 and will refuse unless something else is there.
 
-On boot the server injects a random session token into `ui.html`. Every `/api/*` call must send `x-inbox-token`. HTML is public on localhost; the APIs are not.
+On boot the server writes a random operator code to a private temporary file. Public HTML contains no session token. Unlock exchanges the code for a one-hour HttpOnly, SameSite=Strict cookie; the API also accepts the operator header for trusted local clients. Host/Origin checks reject cross-origin access. Scoped agent sessions cannot access human routes.
 
 The page (`src/cli/ui.html`) is Inbox / Channels / Search / Later / Doctor. They share one message tape and composer.
 
@@ -172,7 +189,7 @@ A second localhost server (`src/cli/draft-server.ts`) powers `message compose` /
 
 ## Testing
 
-Automated tests do **not** need a Slack workspace. They stub `CliContext.getClientForWorkspace` (or call domain functions with a fake `client.api`). Live Slack is manual only.
+Automated tests do **not** need a Slack workspace. They stub `CliContext.getClientForWorkspace` (or call domain functions with a fake `client.api`). Opt-in read-only live verification is available in `scripts/live-smoke.ts`; mutations remain unverified.
 
 ### Automated (required before a change is done)
 
