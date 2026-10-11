@@ -110,3 +110,35 @@ test("mocked HTTP: isolated agent request → operator edit/approve → real gat
     fixture.restore();
   }
 });
+
+test("human edits replace custom blocks before gateway execution", async () => {
+  const fixture = controlFixture();
+  try {
+    const pending = await fixture.service.request(
+      {
+        type: "message.send",
+        workspace: fixture.workspace,
+        target: "#engineering",
+        parameters: {
+          text: "fallback",
+          blocks: [{ type: "section", text: { type: "plain_text", text: "Unreviewed original" } }],
+        },
+      },
+      { id: "agent", source: "AI_AGENT" },
+    );
+    const authority = { actor: { id: "reviewer", source: "HUMAN_UI" as const }, canApprove: true };
+    const edited = await fixture.service.review(pending.id, {
+      authority,
+      revision: 1,
+      operation: "edit",
+      text: "Human-approved replacement",
+    });
+    expect(edited.request.parameters).not.toHaveProperty("blocks");
+    await fixture.service.review(pending.id, { authority, revision: 2, operation: "approve" });
+    const sent = fixture.calls.find((c) => c.method === "chat.postMessage")!;
+    expect(sent.parameters.text).toBe("Human-approved replacement");
+    expect(sent.parameters.blocks).toBeUndefined();
+  } finally {
+    fixture.restore();
+  }
+});

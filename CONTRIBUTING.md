@@ -54,7 +54,9 @@ uncertain mutation outcomes when changing execution. Do not retry mutations mere
 because a request timed out.
 
 Run `bun test`, `bun run typecheck`, `bun run lint`, `bun run format:check`, and
-both builds. `bun scripts/mock-control.ts` is an explicitly mocked browser backend.
+both builds. Install the browser once with `bunx playwright install chromium`,
+then run `bun run test:e2e`. CI runs this fixture-only browser test as well.
+`bun scripts/mock-control.ts` is an explicitly mocked browser backend.
 Live tests are separate and disabled by default; see the operating guide. Never
 use a real workspace for automated write/UI fixtures. Keep the installable skill
 aligned without duplicating CLI help.

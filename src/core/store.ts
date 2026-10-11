@@ -1,3 +1,5 @@
+import { StateSchema } from "./store-validation.ts";
+import type { WorkflowRun } from "./workflow-history.ts";
 import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -24,6 +26,7 @@ export type State = {
   actions: Action[];
   events: AuditEvent[];
   workflows?: Record<string, string>;
+  workflowRuns?: WorkflowRun[];
 };
 export type ActionStore = { transaction<T>(work: (state: State) => T): Promise<T> };
 export const emptyState = (): State => ({ version: 1, actions: [], events: [] });
@@ -126,15 +129,7 @@ export class FileActionStore implements ActionStore {
     try {
       let state = emptyState();
       try {
-        const parsed = JSON.parse(await readFile(this.path, "utf8"));
-        if (
-          parsed.version !== 1 ||
-          !Array.isArray(parsed.actions) ||
-          !Array.isArray(parsed.events)
-        ) {
-          throw new Error("Invalid action store schema");
-        }
-        state = parsed;
+        state = StateSchema.parse(JSON.parse(await readFile(this.path, "utf8")));
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
           throw new ControlError(
@@ -144,6 +139,7 @@ export class FileActionStore implements ActionStore {
         }
       }
       const result = work(state);
+      StateSchema.parse(state);
       const file = await open(temporary, "wx", 0o600);
       try {
         await file.writeFile(JSON.stringify(state));

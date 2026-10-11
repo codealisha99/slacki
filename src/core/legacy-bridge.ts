@@ -10,6 +10,7 @@ export function controlledClient(input: {
   rawContext: CliContext;
   workspace?: string;
   actor: Actor;
+  safeMode?: boolean;
 }): SlackApiClient {
   let service: ActionService | undefined;
   return new Proxy(input.client, {
@@ -49,7 +50,7 @@ export function controlledClient(input: {
             delete params[key];
           }
         }
-        service ??= createActionService(input.rawContext);
+        service ??= createActionService(input.rawContext, { safeMode: input.safeMode });
         const action = await service.request(
           { type, workspace, target: channel, parameters: params },
           input.actor,

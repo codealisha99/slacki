@@ -61,6 +61,8 @@ const EXPECTED_COMMANDS = [
   "plan",
   "automation",
   "automation run",
+  "automation list",
+  "automation get",
   "auth",
   "auth add",
   "auth import-brave",

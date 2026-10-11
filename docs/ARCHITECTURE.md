@@ -23,6 +23,8 @@ claim → `core/slack-execution.ts` → existing SlackApiClient → Slack.
 helpers into the same service while preserving successful Slack receipts.
 `core/store.ts` persists actions and append-only lifecycle events together;
 `core/workflow.ts` sequences validated steps and pauses for approval.
+`core/workflow-history.ts` exposes durable invocation records and linked actions
+to both CLI and UI; records share the existing local action store.
 `core/planner.ts` only constructs bounded notification plans. Agent identity is
 assigned by scoped server sessions, not trusted JSON fields.
 

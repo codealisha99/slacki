@@ -46,7 +46,10 @@ export function slackExecution(ctx: CliContext): ExecutionPort {
           return client.api("chat.postMessage", {
             ...request.parameters,
             text: formatOutboundSlackText(request.parameters.text),
-            blocks: request.parameters.blocks ?? textToRichTextBlocks(request.parameters.text),
+            blocks:
+              request.parameters.blocks ??
+              textToRichTextBlocks(request.parameters.text) ??
+              undefined,
             channel,
             client_msg_id: action.id,
           });
@@ -54,7 +57,8 @@ export function slackExecution(ctx: CliContext): ExecutionPort {
           return client.api("chat.update", {
             ...request.parameters,
             text: formatOutboundSlackText(request.parameters.text),
-            blocks: request.parameters.blocks ?? textToRichTextBlocks(request.parameters.text),
+            blocks:
+              request.parameters.blocks ?? textToRichTextBlocks(request.parameters.text) ?? [],
             channel,
           });
         case "message.delete":

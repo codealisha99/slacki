@@ -2,11 +2,11 @@
 
 Slacki is a focused reading and reply workspace. Its persistent navigation, conversation list, and reading pane keep orientation stable. The conversation is the primary content; chrome stays quiet.
 
-Inspired by [Radix Themes](https://www.radix-ui.com/themes/docs/theme/overview): semantic tokens and a small set of complementary control variants. Implemented directly in `src/cli/ui.html` so the CLI continues to ship a self-contained UI with no font or component-library requests.
+Slacki uses rust orange (`#d94e2f`) as its shared brand accent across the hosted app and local surfaces. The local workspace keeps its cool slate interface and dark theme; the hosted approval dashboard uses warm paper and ink. Both are built around semantic tokens and the same accent family. The local UI stays self-contained so the CLI has no font or component-library requests.
 
 ## Foundations
 
-Use the CSS custom properties in `:root`. Light surfaces are white on cool gray (`#f5f6f8`); text is slate (`#202631`), secondary text is `#657084`, borders are `#e1e5eb`, and the interactive accent is iris (`#5054c7`). The dark theme overrides the same semantic roles. Use accent-soft for selections, success for connection state, danger for failures, and warning for caution.
+Use the CSS custom properties in `:root`. The local light theme uses white on cool gray (`#f5f6f8`); text is slate (`#202631`), secondary text is `#657084`, and borders are `#e1e5eb`. The rust accent and its softer surface indicate selection and primary actions. The dark theme overrides the same semantic roles with a lighter rust accent. Use success for connection state, danger for failures, and warning for caution.
 
 Typography uses the platform sans-serif stack. Body text is 14px with 1.65 line height in messages; supporting text is 12–13px, pane titles are 17–20px, and empty-state titles are 24px. Reserve monospace for diagnostic output. Keep message lines below 78 characters where possible.
 

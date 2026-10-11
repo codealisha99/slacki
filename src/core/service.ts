@@ -172,10 +172,13 @@ export class ActionService {
             "Only message/draft text can be edited. Reject and submit a new action for target changes.",
           );
         }
-        action.request = validateRequest({
-          ...action.request,
-          parameters: { ...action.request.parameters, text: input.text },
-        });
+        const parameters = { ...action.request.parameters, text: input.text };
+        // A text edit replaces the rendered message too. Retaining caller-supplied
+        // blocks would send different content from the human's reviewed edit.
+        if ("blocks" in parameters) {
+          delete parameters.blocks;
+        }
+        action.request = validateRequest({ ...action.request, parameters });
         action.revision++;
         action.updatedAt = new Date(this.now()).toISOString();
       } else {
