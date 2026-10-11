@@ -16,16 +16,6 @@ async function membership(userId: string): Promise<Membership> {
   return result.rows[0] as Membership;
 }
 
-async function slackCall(token: string, method: string, body: Record<string, string | boolean>) {
-  const response = await fetch(`https://slack.com/api/${method}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify(body), cache: "no-store",
-  });
-  const data = await response.json() as { ok?: boolean; error?: string };
-  if (!response.ok || !data.ok) {throw new Error(`Slack action failed (${data.error ?? response.status})`);}
-}
-
 async function reachableChannel(userId: string, workspaceId: string, channelId: string) {
   const token = await getSlackToken(userId, workspaceId);
   const response = await fetch(`https://slack.com/api/conversations.info?channel=${encodeURIComponent(channelId)}`, {
@@ -97,19 +87,17 @@ export async function decideAction(formData: FormData) {
 
   const member = await membership(user.id);
   const client = await db.connect();
-  let slackToken: string | null = null;
   let adminRoleRevoked = false;
-  let action: { action_type: string; payload: Record<string, unknown>; requested_by: string; requires_admin: boolean } | undefined;
   try {
     await client.query("BEGIN");
     const locked = await client.query(
       `SELECT action_type, payload, requested_by, requires_admin FROM action_approvals
         WHERE id = $1 AND workspace_id = $2 AND status = 'pending' FOR UPDATE`, [id, member.workspace_id],
     );
-    action = locked.rows[0] as typeof action;
+    const action = locked.rows[0] as { requires_admin: boolean } | undefined;
     if (!action) {throw new Error("This approval is no longer pending");}
     if (action.requires_admin) {
-      slackToken = await getSlackToken(user.id, member.workspace_id);
+      const slackToken = await getSlackToken(user.id, member.workspace_id);
       const profileResponse = await fetch(`https://slack.com/api/users.info?user=${encodeURIComponent(member.slack_user_id)}`, {
         headers: { Authorization: `Bearer ${slackToken}` }, cache: "no-store", signal: AbortSignal.timeout(10_000),
       });
@@ -129,7 +117,7 @@ export async function decideAction(formData: FormData) {
       revalidatePath("/dashboard");
       return;
     }
-    await client.query("UPDATE action_approvals SET status = 'executing', approved_by = $2, decided_at = now() WHERE id = $1", [id, user.id]);
+    await client.query("UPDATE action_approvals SET status = 'approved', approved_by = $2, decided_at = now() WHERE id = $1", [id, user.id]);
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
@@ -142,32 +130,6 @@ export async function decideAction(formData: FormData) {
     client.release();
   }
 
-  if (!action) {throw new Error("Approval not found");}
-  try {
-    const token = slackToken ?? await getSlackToken(user.id, member.workspace_id);
-    const {payload} = action;
-    if (action.action_type === "message.send") {
-      const channel = String(payload.channel ?? "");
-      const text = String(payload.text ?? "");
-      if (!/^[CDG][A-Z0-9]+$/i.test(channel) || !text || text.length > 4000) {throw new Error("Stored message action failed validation");}
-      await slackCall(token, "chat.postMessage", { channel, text });
-    } else if (action.action_type === "channel.create") {
-      const name = String(payload.name ?? "");
-      if (!/^[a-z0-9_-]{1,80}$/.test(name)) {throw new Error("Stored channel name failed validation");}
-      await slackCall(token, "conversations.create", { name, is_private: payload.is_private === true });
-    } else if (action.action_type === "channel.invite") {
-      const channel = String(payload.channel ?? "");
-      const users = Array.isArray(payload.users) ? payload.users.map(String) : [];
-      if (!/^[CDG][A-Z0-9]+$/i.test(channel) || users.length < 1 || users.length > 50 || users.some((id) => !/^U[A-Z0-9]+$/i.test(id))) {throw new Error("Stored invite action failed validation");}
-      await slackCall(token, "conversations.invite", { channel, users: users.join(",") });
-    } else {
-      throw new Error("Unsupported action type");
-    }
-    await db.query("UPDATE action_approvals SET status = 'executed', executed_at = now() WHERE id = $1 AND status = 'executing'", [id]);
-  } catch (error) {
-    await db.query("UPDATE action_approvals SET status = 'failed', result = $2::jsonb WHERE id = $1 AND status = 'executing'", [id, JSON.stringify({ error: error instanceof Error ? error.message : "Unknown execution error" })]);
-    throw error;
-  }
   revalidatePath("/dashboard");
 }
 
