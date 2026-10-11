@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" rx="28" fill="#F7F5EF"/>
+  <path d="M0 565H1200" stroke="#E4E0D7"/>
+  <circle cx="1012" cy="145" r="180" fill="#EFE9DE"/>
+  <circle cx="1012" cy="145" r="128" fill="#F7F5EF" stroke="#E4E0D7"/>
+  <rect x="79" y="68" width="48" height="48" rx="15" fill="#D94E2F"/>
+  <path d="M91 82h24a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4h-13l-7 5v-5h-4a4 4 0 0 1-4-4V86a4 4 0 0 1 4-4Z" stroke="#FFFEFA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m96 91 4 4 9-9" stroke="#FFFEFA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="143" y="101" fill="#24231F" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="-1.2">slacki</text>
+  <text x="80" y="241" fill="#9A4A32" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="2.5">SLACK WORKSPACE CONTROL</text>
+  <text x="76" y="330" fill="#24231F" font-family="Arial, Helvetica, sans-serif" font-size="70" font-weight="700" letter-spacing="-3">Make Slack work</text>
+  <text x="76" y="410" fill="#24231F" font-family="Arial, Helvetica, sans-serif" font-size="70" font-weight="700" letter-spacing="-3">with intention.</text>
+  <text x="80" y="468" fill="#68665F" font-family="Arial, Helvetica, sans-serif" font-size="23">Read conversations. Prepare actions.</text>
+  <text x="80" y="500" fill="#68665F" font-family="Arial, Helvetica, sans-serif" font-size="23">Let people approve changes.</text>
+  <rect x="744" y="194" width="372" height="278" rx="18" fill="#FFFEFA" stroke="#E4E0D7" stroke-width="2"/>
+  <rect x="744" y="194" width="372" height="52" rx="18" fill="#F2EFE7"/>
+  <path d="M744 228h372" stroke="#E4E0D7" stroke-width="2"/>
+  <circle cx="771" cy="220" r="5" fill="#D94E2F"/>
+  <circle cx="790" cy="220" r="5" fill="#D8CFC0"/>
+  <circle cx="809" cy="220" r="5" fill="#D8CFC0"/>
+  <text x="773" y="283" fill="#77736B" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" letter-spacing="1.4">PENDING REVIEW</text>
+  <text x="773" y="323" fill="#24231F" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">Post a channel update</text>
+  <rect x="773" y="342" width="313" height="54" rx="9" fill="#F7F5EF"/>
+  <text x="791" y="375" fill="#56534C" font-family="Arial, Helvetica, sans-serif" font-size="15">The deployment is ready for review.</text>
+  <rect x="773" y="415" width="140" height="38" rx="8" fill="#D94E2F"/>
+  <text x="796" y="440" fill="#FFFEFA" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700">Approve action</text>
+  <text x="80" y="583" fill="#77736B" font-family="Arial, Helvetica, sans-serif" font-size="15" letter-spacing="0.3">LOCAL CLI  ·  HOSTED WORKSPACE  ·  HUMAN APPROVAL</text>
+</svg>

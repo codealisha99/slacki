@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Slacki's hosted Slack workspace and approvals dashboard",
+  "author": "Alisha Karma <lishykarma99@gmail.com>",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
