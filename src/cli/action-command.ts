@@ -7,6 +7,7 @@ import { isSafeModeEnabledFor } from "./safe-mode.ts";
 import { sanitize } from "../core/store.ts";
 import { planNotification } from "../core/planner.ts";
 import { runLocalWorkflow } from "../core/workflow.ts";
+import { listWorkflowRuns, getWorkflowRun } from "../core/workflow-history.ts";
 
 export async function readInput(path: string): Promise<unknown> {
   return JSON.parse(path === "-" ? readFileSync(0, "utf8") : await readFile(path, "utf8"));
@@ -96,6 +97,14 @@ export function registerActionCommand(input: { program: Command; ctx: CliContext
     .description(
       "Run local deterministic workflows (Slack-native workflow commands remain available)",
     );
+  automation
+    .command("list")
+    .description("List recorded local workflow runs and resumes")
+    .action(output(() => listWorkflowRuns(service().options.store)));
+  automation
+    .command("get <id>")
+    .description("Inspect a workflow run and its current step actions")
+    .action((id) => output(() => getWorkflowRun(service().options.store, id))());
   automation
     .command("run <file>")
     .requiredOption(

@@ -1,8 +1,10 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Actor, Action } from "./action.ts";
-import { validateRequest, ControlError } from "./action.ts";
+import { ActorSchema, validateRequest, ControlError } from "./action.ts";
 import type { ActionService } from "./service.ts";
+import type { WorkflowRun } from "./workflow-history.ts";
+import { sanitize } from "./store.ts";
 
 export const WorkflowSchema = z
   .object({
@@ -41,12 +43,37 @@ export async function runLocalWorkflow(
       "runKey must contain 1–80 letters, digits, underscores or hyphens.",
     );
   }
+  ActorSchema.parse(input.actor);
   const plan = WorkflowSchema.parse(input.plan);
   // Validate every step before the first effect, including conditionally skipped ones.
   const steps = plan.steps.map((step) => ({ ...step, request: validateRequest(step.action) }));
+  const run: WorkflowRun = {
+    id: randomUUID(),
+    workflow: plan.id,
+    runKey: input.runKey,
+    actor: input.actor,
+    planHash: createHash("sha256").update(JSON.stringify(plan)).digest("hex"),
+    status: "RUNNING",
+    startedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    steps: steps.map((step) => ({ id: step.id, status: "WAITING" })),
+  };
+  const save = async () => {
+    if (input.dryRun) {
+      return;
+    }
+    run.updatedAt = new Date().toISOString();
+    await service.options.store.transaction((state) => {
+      const index = state.workflowRuns?.findIndex((entry) => entry.id === run.id) ?? -1;
+      if (index < 0) {
+        throw new ControlError("StorageError", "Workflow run record is missing.");
+      }
+      state.workflowRuns![index] = structuredClone(run);
+    });
+  };
   if (!input.dryRun) {
     const key = JSON.stringify([input.actor.source, input.actor.id, plan.id, input.runKey]);
-    const hash = createHash("sha256").update(JSON.stringify(plan)).digest("hex");
+    const hash = run.planHash;
     await service.options.store.transaction((state) => {
       state.workflows ??= {};
       if (state.workflows[key] && state.workflows[key] !== hash) {
@@ -56,35 +83,61 @@ export async function runLocalWorkflow(
         );
       }
       state.workflows[key] = hash;
+      (state.workflowRuns ??= []).push(structuredClone(run));
     });
   }
   const actions: Action[] = [];
   const skipped: string[] = [];
-  for (const step of steps) {
-    if (step.when && plan.context[step.when.field] !== step.when.equals) {
-      skipped.push(step.id);
-      continue;
+  try {
+    for (const [index, step] of steps.entries()) {
+      const recorded = run.steps[index]!;
+      if (step.when && plan.context[step.when.field] !== step.when.equals) {
+        skipped.push(step.id);
+        recorded.status = "SKIPPED";
+        await save();
+        continue;
+      }
+      recorded.status = "REQUESTING";
+      await save();
+      const request = { ...step.request, key: `workflow:${plan.id}:${input.runKey}:${step.id}` };
+      const action = input.dryRun
+        ? (await service.preview(request, input.actor)).action
+        : await service.request(request, input.actor);
+      actions.push(action);
+      recorded.status = "RECORDED";
+      recorded.actionId = action.id;
+      if (!input.dryRun && action.status !== "SUCCESS") {
+        run.status = action.status === "PENDING_APPROVAL" ? "PAUSED" : "STOPPED";
+        await save();
+        return {
+          workflow: plan.id,
+          runKey: input.runKey,
+          runId: run.id,
+          status: run.status,
+          actions,
+          skipped,
+        };
+      }
+      await save();
     }
-    const request = { ...step.request, key: `workflow:${plan.id}:${input.runKey}:${step.id}` };
-    const action = input.dryRun
-      ? (await service.preview(request, input.actor)).action
-      : await service.request(request, input.actor);
-    actions.push(action);
-    if (!input.dryRun && action.status !== "SUCCESS") {
-      return {
-        workflow: plan.id,
-        runKey: input.runKey,
-        status: action.status === "PENDING_APPROVAL" ? "PAUSED" : "STOPPED",
-        actions,
-        skipped,
-      };
-    }
+    run.status = "SUCCESS";
+    await save();
+    return {
+      workflow: plan.id,
+      runKey: input.runKey,
+      runId: input.dryRun ? undefined : run.id,
+      status: input.dryRun ? "DRY_RUN" : "SUCCESS",
+      actions,
+      skipped,
+    };
+  } catch (error) {
+    run.status = "FAILED";
+    // Do not persist arbitrary exception payloads, which can contain credentials.
+    run.error =
+      error instanceof ControlError
+        ? sanitize(error.message)
+        : "Workflow interrupted by an internal error. Inspect its recorded actions before resuming with the same run key.";
+    await save();
+    throw error;
   }
-  return {
-    workflow: plan.id,
-    runKey: input.runKey,
-    status: input.dryRun ? "DRY_RUN" : "SUCCESS",
-    actions,
-    skipped,
-  };
 }

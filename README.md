@@ -19,6 +19,9 @@ Created and maintained by **Alisha Karma**.
 
 The local control center adds Actions, Approvals, Workflows and Activity alongside the existing Slack tools. See [operating the control plane](docs/CONTROL_PLANE.md) for policy, agent sessions, persistence, dry runs and exact commands, and [implementation status](docs/IMPLEMENTATION_REPORT.md) for verification and remaining work. Live Slack mutation behavior is not comprehensively verified.
 
+Local workflow runs have persisted history in the Workflows page and through
+`automation list` / `automation get`, including paused attempts and linked actions.
+
 Guiding principle:
 
 - **Token-efficient** — (compact JSON, minimal duplication, and empty/null fields pruned) so LLMs can consume results cheaply.

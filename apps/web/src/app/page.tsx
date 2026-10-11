@@ -184,6 +184,7 @@ export default function Home({ searchParams }: { searchParams: Promise<{ auth_er
         <span className="footer-links">
           <Link href="https://github.com/codealisha99/slacki">GitHub ↗</Link>
           <Link href="https://x.com/karmalisha">X ↗</Link>
+          <Link href="mailto:lishykarma99@gmail.com">Email</Link>
         </span>
       </footer>
       <Suspense fallback={null}>

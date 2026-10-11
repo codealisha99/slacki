@@ -38,3 +38,9 @@ jobs:
 
       - name: Test
         run: bun run test
+
+      - name: Install browser for mocked E2E
+        run: bunx playwright install --with-deps chromium
+
+      - name: Browser E2E (mock Slack only)
+        run: bun run test:e2e

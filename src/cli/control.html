@@ -250,6 +250,17 @@
           element("p", "Approval expires: " + new Date(a.approval.expiresAt).toLocaleString()),
         );
       if (a.status === "PENDING_APPROVAL") {
+        detail.append(
+          element("h2", "Complete action parameters"),
+          element("pre", JSON.stringify(a.request.parameters, null, 2)),
+        );
+        if (a.request.parameters.blocks)
+          detail.append(
+            element(
+              "p",
+              "This request includes custom message blocks. Saving a text edit replaces those blocks with formatting generated from your edited text.",
+            ),
+          );
         let text;
         if (typeof a.request.parameters.text === "string")
           text = field(detail, "Message content", "textarea", a.request.parameters.text);
@@ -310,12 +321,13 @@
       const workspace = field(body, "Workspace URL", "input", state.session?.workspace_url || "");
       const target = field(body, "Channel or existing DM", "input", "#engineering");
       const text = field(body, "Message", "textarea");
+      const requestKey = crypto.randomUUID();
       const input = () => ({
         type,
         workspace: workspace.value,
         target: target.value,
         parameters: { text: text.value },
-        key: crypto.randomUUID(),
+        key: requestKey,
       });
       const controls = element("div", null, "controls");
       controls.append(
@@ -337,7 +349,38 @@
       );
       body.append(controls);
     }
-    function workflows() {
+    async function workflows() {
+      const history = element("section");
+      body.append(history);
+      async function refreshHistory() {
+        const runs = await call("workflows");
+        history.replaceChildren(element("h2", "Run history"));
+        if (!runs.length) history.append(element("p", "No recorded workflow runs yet."));
+        for (const run of runs) {
+          const row = element("div", null, "controls");
+          row.append(
+            element("span", `${run.workflow} · ${run.runKey} · ${run.status} · ${run.startedAt}`),
+          );
+          row.append(
+            button("Inspect run", async () => {
+              const detail = await call(`workflows/${run.id}`);
+              const panel = element("div", null, "detail");
+              panel.append(element("pre", JSON.stringify(detail, null, 2)));
+              for (const action of detail.actions) {
+                panel.append(
+                  button(`Inspect ${action.request.type}: ${action.status}`, () =>
+                    inspect(action.id),
+                  ),
+                );
+              }
+              history.append(panel);
+            }),
+          );
+          history.append(row);
+        }
+      }
+      await refreshHistory();
+      if (!history.isConnected) return;
       body.append(
         element(
           "p",
@@ -383,6 +426,7 @@
                 null,
                 2,
               );
+              if (!dryRun) await refreshHistory();
             },
             !dryRun,
           ),
@@ -502,7 +546,7 @@
             ),
           );
           data(await call("policy"));
-        } else if (view === "Workflows") workflows();
+        } else if (view === "Workflows") await workflows();
         else if (view === "Settings") await settings();
       } catch (e) {
         if (request === generation) {

@@ -43,3 +43,4 @@ design-docs/
 # browser test output
 playwright-report/
 test-results/
+.vercel

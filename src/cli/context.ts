@@ -13,7 +13,7 @@ import { getClientForWorkspace, normalizeUrl } from "./context-client-resolver.t
 
 export type CliContext = {
   rawContext?: () => CliContext;
-  forActor?: (actor: Actor) => CliContext;
+  forActor?: (actor: Actor, options?: { safeMode?: boolean }) => CliContext;
   effectiveWorkspaceUrl: (flag?: string) => string | undefined;
   assertWorkspaceSpecifiedForChannelNames: (input: {
     workspaceUrl: string | undefined;
@@ -141,6 +141,7 @@ async function withAutoRefresh<T>(input: {
 
 export function createCliContext(
   actor: Actor = { id: "local-operator", source: "HUMAN_CLI" },
+  options: { safeMode?: boolean } = {},
 ): CliContext {
   const raw: CliContext = {
     effectiveWorkspaceUrl,
@@ -159,7 +160,7 @@ export function createCliContext(
   return {
     ...raw,
     rawContext: () => raw,
-    forActor: (next) => createCliContext(next),
+    forActor: (next, settings) => createCliContext(next, settings ?? options),
     getClientForWorkspace: async (workspace) => {
       const resolved = await getClientForWorkspace(workspace);
       return {
@@ -169,6 +170,7 @@ export function createCliContext(
           rawContext: raw,
           workspace: resolved.workspace_url,
           actor,
+          safeMode: options.safeMode,
         }),
       };
     },

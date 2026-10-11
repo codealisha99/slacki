@@ -50,8 +50,9 @@ fails on ambiguity. User handles resolve only to an already-existing DM; plannin
 never creates a DM. Slack permission errors fail closed.
 
 Approvals bind a revision and have a policy-configured expiration (one hour by
-default, at most one day). Editing text increments the revision; save before
-approving. Targets cannot be edited in place: reject and request a new action.
+default, at most one day). Editing text increments the revision and replaces any custom message blocks;
+save before approving. The approval page displays the complete parameters, including
+blocks, thread and scheduling options. Targets cannot be edited in place: reject and request a new action.
 Policy is evaluated again before dispatch. Simultaneous approvals cannot claim
 the same action twice. A human rejection or expiration is terminal.
 
@@ -102,6 +103,8 @@ controlled execution also enforces it. A human UI send is not a policy bypass.
 ```sh
 bun run src/index.ts automation run examples/deployment-workflow.json --run-key incident-42 --dry-run
 bun run src/index.ts automation run examples/deployment-workflow.json --run-key incident-42
+bun run src/index.ts automation list
+bun run src/index.ts automation get RUN_ID
 ```
 
 A workflow contains explicit context, steps, optional equality conditions and
@@ -111,6 +114,19 @@ Approve the paused action, then repeat the same command/run key to resume.
 Successful steps are not repeated. The plan and context are fingerprinted;
 changing them with the same run key is rejected. Use a new key for a genuinely
 new run, not to retry an uncertain mutation.
+
+Each run/resume invocation has a durable run ID with actor, plan fingerprint,
+timestamps, step action references, skipped steps and outcome. Inspect it in the
+Workflows page or with `automation get`; linked actions show their current status.
+A paused invocation remains PAUSED after a later successful resume, preserving
+the sequence of attempts. Dry runs do not write history. Invalid plans and
+conflicting run keys fail before a run record or action is created.
+
+An interrupted process can leave a RUNNING record and a REQUESTING step. These
+are observations, not permission to replay: inspect action history, then use the
+identical plan/run key to resume through existing idempotency checks. No automatic
+crash recovery or mutation retry is introduced. Runs predating this feature have
+action history but no retroactively generated run records.
 
 Triggers are manual CLI/UI calls or an external scheduler calling the structured
 interface. There is no background scheduler, webhook listener, arbitrary code
@@ -151,6 +167,7 @@ The same-OS operator is trusted. This is not multi-tenant authentication.
 The replaceable store interface has memory and file implementations. Production
 uses an owner-only JSON snapshot with atomic rename and fsync, guarded by an
 exclusive lock directory. State and append-only lifecycle events commit together.
+The persisted action/approval/audit schema is validated on reads and writes.
 A corrupt file fails closed rather than resetting. It is not tamper-proof against
 the OS owner. Back up this directory securely; message content is sensitive.
 
@@ -182,18 +199,25 @@ bun test
 bun run typecheck
 bun run lint
 bun run format:check
+bunx playwright install chromium
+bun run test:e2e
 bun run build
 bun run build:npm
 bun scripts/mock-control.ts
 bun scripts/live-smoke.ts
 ```
 
-Unit tests, mocked HTTP/CLI integration and a tool-driven browser scenario are
-separate from live testing. `mock-control.ts` intercepts Slack HTTP while retaining
+Unit tests, mocked HTTP/CLI integration and Playwright browser E2E are separate
+from live testing. `mock-control.ts` intercepts Slack HTTP while retaining
 the real SlackApiClient; it uses in-memory fixture actions and no real credentials.
 The browser scenario verifies unlock, dashboard, pending agent request, inspect,
 edit, approve, SUCCESS, lifecycle activity and draft creation. This was exercised
-with T3's collaborative browser. It is not a standalone Playwright CI suite.
+with T3's collaborative browser and independently by `bun run test:e2e`. The
+Playwright suite starts its own mock backend on port 18790 (override with
+`SLACKI_E2E_PORT`) and runs in CI. Screenshots are saved under `.cache`; failed
+traces are local test artifacts under `test-results`, which is ignored by Git.
+These fixture-only artifacts can contain temporary mock session codes; do not
+run the suite against real credentials or publish traces from real operator sessions.
 
 Live smoke defaults to SKIPPED. Enable with `SLACKI_LIVE_TEST=1`, `SLACK_TOKEN`,
 `SLACK_WORKSPACE_URL`, `SLACKI_TEST_CHANNEL`, and `SLACK_COOKIE_D` for browser auth.

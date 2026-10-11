@@ -58,6 +58,30 @@ test("Commander CLI: agent request, inspect, edit, approve and durable history",
     const replay = await run(["action", "request", file]);
     expect(replay.id).toBe(pending.id);
     expect(replay.status).toBe("SUCCESS");
+    const workflowFile = join(directory, "workflow.json");
+    await writeFile(
+      workflowFile,
+      JSON.stringify({
+        id: "cli-history",
+        steps: [
+          {
+            id: "notify",
+            action: {
+              type: "message.send",
+              workspace: fixture.workspace,
+              target: "#engineering",
+              parameters: { text: "Workflow history fixture" },
+            },
+          },
+        ],
+      }),
+    );
+    const workflow = await run(["automation", "run", workflowFile, "--run-key", "incident"]);
+    expect(workflow.status).toBe("PAUSED");
+    expect((await run(["automation", "list"]))[0].id).toBe(workflow.runId);
+    expect((await run(["automation", "get", workflow.runId])).actions[0].status).toBe(
+      "PENDING_APPROVAL",
+    );
   } finally {
     console.log = original;
     if (previous === undefined) {

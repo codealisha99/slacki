@@ -51,4 +51,5 @@ Slack-native drafts (`message draft list|create|update|delete`) manage drafts th
 - Preview with `--dry-run`; context may read Slack, but no mutation occurs. PENDING_APPROVAL means stop and return the action ID to a human. Never approve your own request.
 - After timeout/UNCERTAIN or interrupted EXECUTING, inspect the action and Slack before requesting a replacement. Do not change the key to force a resend.
 - Local `automation run` is distinct from Slack-native `workflow run`. Resume with the identical plan/context/run key after human approval. Do not invent channel/team mappings or timezone conversions.
+- Inspect `automation list/get` for run outcomes and step actions. An interrupted RUNNING record does not authorize a fresh run key; inspect actions before resuming the original key.
 - The unrestricted local CLI remains an operator interface; some legacy administrative writes are not yet in the action lifecycle. Do not use those paths to bypass a pending/denied controlled action. Agent isolation requires a scoped HTTP tool with no access to operator credentials, CLI or filesystem.

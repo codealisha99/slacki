@@ -4,6 +4,7 @@ import type { ActionService } from "../core/service.ts";
 import { ControlError, validateRequest } from "../core/action.ts";
 import { planNotification } from "../core/planner.ts";
 import { runLocalWorkflow } from "../core/workflow.ts";
+import { listWorkflowRuns, getWorkflowRun } from "../core/workflow-history.ts";
 import { loadPolicy } from "../core/runtime.ts";
 
 export function tokenMatches(actual: unknown, expected: string): boolean {
@@ -92,6 +93,13 @@ export function createControlRoutes(
         .strict()
         .parse(body);
       return runLocalWorkflow(service, { ...request, actor: { id: actor.id, source: "WORKFLOW" } });
+    }
+    if (path === "/api/control/workflows" && method === "GET") {
+      return listWorkflowRuns(service.options.store);
+    }
+    const workflowMatch = /^\/api\/control\/workflows\/([a-f0-9-]+)$/.exec(path);
+    if (workflowMatch && method === "GET") {
+      return getWorkflowRun(service.options.store, workflowMatch[1]!);
     }
     if (path === "/api/control/agent-session" && method === "POST") {
       const request = z

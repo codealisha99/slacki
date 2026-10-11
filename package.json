@@ -3,6 +3,7 @@
   "version": "0.9.3",
   "description": "Slack automation CLI for AI agents",
   "license": "MIT",
+  "author": "Alisha Karma <lishykarma99@gmail.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codealisha99/slacki.git"
@@ -59,6 +60,12 @@
     "semver": "^7.7.4",
     "simple-git-hooks": "^2.13.1",
     "typescript": "^5.8.2"
+  },
+  "overrides": {
+    "axios": "1.20.0",
+    "follow-redirects": "1.16.0",
+    "form-data": "4.0.6",
+    "tinypool": "2.1.2"
   },
   "simple-git-hooks": {
     "pre-commit": "bun run lint && bun run format:check"

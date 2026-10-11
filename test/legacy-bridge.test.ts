@@ -35,6 +35,17 @@ test("legacy message API contracts use the same policy service and preserve cust
     const actions = await createActionService(fixture.ctx).list();
     expect(actions.map((a) => a.status)).toEqual(["SUCCESS", "PENDING_APPROVAL"]);
     expect(fixture.calls.some((c) => c.method === "chat.delete")).toBe(false);
+    const guarded = controlledClient({
+      client,
+      rawContext: fixture.ctx,
+      workspace: fixture.workspace,
+      actor: { id: "operator", source: "HUMAN_UI" },
+      safeMode: true,
+    });
+    await expect(
+      guarded.api("chat.postMessage", { channel: "C01234567", text: "Blocked UI send" }),
+    ).rejects.toThrow("DENIED");
+    expect(fixture.calls.filter((c) => c.method === "chat.postMessage")).toHaveLength(1);
   } finally {
     fixture.restore();
     if (previous === undefined) {

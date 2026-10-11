@@ -169,7 +169,11 @@ export async function startInboxUi(options: InboxUiOptions): Promise<RunningInbo
       },
     },
   );
-  const ctx = options.ctx.forActor?.({ id: "local-operator", source: "HUMAN_UI" }) ?? options.ctx;
+  const ctx =
+    options.ctx.forActor?.(
+      { id: "local-operator", source: "HUMAN_UI" },
+      { safeMode: options.cliSafeMode },
+    ) ?? options.ctx;
   const { workspaceUrl } = options;
 
   const isAuthorized = (req: IncomingMessage): boolean => {
