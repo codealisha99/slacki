@@ -1,0 +1,12 @@
+{
+  "name": "slacki-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}
