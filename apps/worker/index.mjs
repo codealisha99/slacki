@@ -1,9 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { Pool } from "pg";
 
-if (!process.env.DATABASE_URL) {throw new Error("DATABASE_URL is required");}
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 3, idleTimeoutMillis: 10_000 });
-const pollIntervalMs = 1_000;
+let pool;
 const timeoutMs = 15_000;
 let stopping = false;
 
@@ -170,7 +168,15 @@ async function processOne() {
 }
 
 async function main() {
+  const required = ["DATABASE_URL", "TOKEN_ENCRYPTION_KEY", "SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"];
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length) {
+    console.warn(`Worker is idle until these Railway variables are configured: ${missing.join(", ")}`);
+    while (!stopping) {await new Promise((resolve) => setTimeout(resolve, 60_000));}
+    return;
+  }
   encryptionKey();
+  pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 3, idleTimeoutMillis: 10_000 });
   console.log("Slacki approval worker started");
   while (!stopping) {
     try {
@@ -180,7 +186,7 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 1_000));
     }
   }
-  await pool.end();
+  await pool?.end();
 }
 
 process.on("SIGTERM", () => { stopping = true; });
