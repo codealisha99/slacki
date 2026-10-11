@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/cover.png" alt="slacki" width="100%" />
+  <img src="docs/cover.svg" alt="Slacki — human-reviewed Slack workspace actions" width="100%" />
 </p>
 
 # slacki

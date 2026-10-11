@@ -157,7 +157,13 @@ async function DashboardContent({ searchParams }: { searchParams: Promise<{ chan
     <main className="app-shell">
       <aside className="app-sidebar">
         <a href="/dashboard" className="brand app-brand">
-          <span className="brand-mark">s</span> slacki
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" focusable="false">
+              <path d="M17 18h30a5 5 0 0 1 5 5v15a5 5 0 0 1-5 5H31l-9 7v-7h-5a5 5 0 0 1-5-5V23a5 5 0 0 1 5-5Z" />
+              <path d="m22 31 6 6 13-14" />
+            </svg>
+          </span>{" "}
+          slacki
         </a>
         <div className="app-nav-label">WORKSPACE</div>
         <a className="app-nav active" href="/dashboard">

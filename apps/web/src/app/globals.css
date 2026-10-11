@@ -77,9 +77,15 @@ textarea {
   border-radius: 11px;
   background: var(--orange);
   color: white;
-  font:
-    italic 700 24px/1 Georgia,
-    serif;
+}
+.brand-mark svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .nav-link {
   min-height: 44px;
@@ -300,7 +306,11 @@ textarea {
   width: 23px;
   height: 23px;
   border-radius: 7px;
-  font-size: 16px;
+}
+.brand-mark.small svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 6;
 }
 .side-item {
   min-height: 36px;

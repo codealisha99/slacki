@@ -14,7 +14,10 @@ export default function Home({ searchParams }: { searchParams: Promise<{ auth_er
       <nav className="topbar">
         <Link href="/" className="brand">
           <span className="brand-mark" aria-hidden="true">
-            s
+            <svg viewBox="0 0 64 64" focusable="false">
+              <path d="M17 18h30a5 5 0 0 1 5 5v15a5 5 0 0 1-5 5H31l-9 7v-7h-5a5 5 0 0 1-5-5V23a5 5 0 0 1 5-5Z" />
+              <path d="m22 31 6 6 13-14" />
+            </svg>
           </span>{" "}
           slacki
         </Link>
@@ -75,7 +78,13 @@ export default function Home({ searchParams }: { searchParams: Promise<{ auth_er
             <div className="preview-body">
               <aside className="preview-side">
                 <div className="preview-logo">
-                  <span className="brand-mark small">s</span> slacki
+                  <span className="brand-mark small">
+                    <svg viewBox="0 0 64 64" focusable="false">
+                      <path d="M17 18h30a5 5 0 0 1 5 5v15a5 5 0 0 1-5 5H31l-9 7v-7h-5a5 5 0 0 1-5-5V23a5 5 0 0 1 5-5Z" />
+                      <path d="m22 31 6 6 13-14" />
+                    </svg>
+                  </span>{" "}
+                  slacki
                 </div>
                 <div className="side-item active">
                   <b aria-hidden="true">◫</b> Overview

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Background worker for human-approved Slacki workspace actions",
+  "author": "Alisha Karma <lishykarma99@gmail.com>",
   "type": "module",
   "scripts": {
     "start": "node index.mjs"
