@@ -18,7 +18,7 @@ Generate the encryption key locally; never commit the real value:
 openssl rand -hex 32 # TOKEN_ENCRYPTION_KEY
 ```
 
-For Vercel, set `APP_URL`, `DATABASE_URL`, `TOKEN_ENCRYPTION_KEY`, `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, and `SLACK_REDIRECT_URI`. The current production URL is `https://web-beta-eight-zgpm6cl36r.vercel.app`; use it as `APP_URL` and set `SLACK_REDIRECT_URI` to `https://web-beta-eight-zgpm6cl36r.vercel.app/api/auth/slack/callback`. Set `DATABASE_URL_UNPOOLED` for migration jobs only. Add the exact callback URL to the Slack app and Vercel environment. Keep OAuth client and database secrets in Vercel environment settings, never in GitHub source or chat.
+For Vercel, set `APP_URL`, `DATABASE_URL`, `TOKEN_ENCRYPTION_KEY`, `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, and `SLACK_REDIRECT_URI`. The current production URL is `https://slacki-web.vercel.app`; use it as `APP_URL` and set `SLACK_REDIRECT_URI` to `https://slacki-web.vercel.app/api/auth/slack/callback`. Set `DATABASE_URL_UNPOOLED` for migration jobs only. Add the exact callback URL to the Slack app and Vercel environment. Keep OAuth client and database secrets in Vercel environment settings, never in GitHub source or chat.
 
 The hosted product supports multiple people connecting their own Slack workspaces. Its current action set is read joined channel history, queue messages for approval, create channels, and invite users to channels. Every send waits for a person to approve it; channel creation and invitations require a current Slack workspace admin. Workspace-wide administrative APIs are not included; they require a separate Slack Enterprise Grid organization-level installation and approval policy.
 
