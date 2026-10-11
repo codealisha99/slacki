@@ -6,7 +6,9 @@ import pg from "pg";
 const { Pool } = pg;
 const here = dirname(fileURLToPath(import.meta.url));
 const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
-if (!connectionString) {throw new Error("Set DATABASE_URL_UNPOOLED (preferred) or DATABASE_URL first");}
+if (!connectionString) {
+  throw new Error("Set DATABASE_URL_UNPOOLED (preferred) or DATABASE_URL first");
+}
 if (!process.env.DATABASE_URL_UNPOOLED && /-pooler\./.test(new URL(connectionString).hostname)) {
   throw new Error("Use Neon’s direct DATABASE_URL_UNPOOLED for schema migrations");
 }
@@ -17,10 +19,16 @@ try {
     name text PRIMARY KEY,
     applied_at timestamptz NOT NULL DEFAULT now()
   )`);
-  const files = (await readdir(join(here, "../migrations"))).filter((file) => file.endsWith(".sql")).sort();
+  const files = (await readdir(join(here, "../migrations")))
+    .filter((file) => file.endsWith(".sql"))
+    .sort();
   for (const name of files) {
-    const exists = await pool.query("SELECT 1 FROM slacki_schema_migrations WHERE name = $1", [name]);
-    if (exists.rowCount) {continue;}
+    const exists = await pool.query("SELECT 1 FROM slacki_schema_migrations WHERE name = $1", [
+      name,
+    ]);
+    if (exists.rowCount) {
+      continue;
+    }
     const sql = await readFile(join(here, "../migrations", name), "utf8");
     const client = await pool.connect();
     try {

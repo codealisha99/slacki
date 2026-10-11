@@ -13,16 +13,36 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Slacki — Your Slack, with intention",
-  description: "A calmer workspace for reading, responding, and taking approved actions in Slack.",
+  metadataBase: new URL("https://slacki-web.vercel.app"),
+  title: {
+    default: "Slacki — Slack actions with human approval",
+    template: "%s · Slacki",
+  },
+  description:
+    "Read Slack channel history and review messages and channel changes before they happen.",
+  authors: [{ name: "Alisha Karma", url: "https://github.com/codealisha99" }],
+  creator: "Alisha Karma",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "Slacki",
+    title: "Slacki — Slack actions with human approval",
+    description:
+      "Read Slack channel history and review messages and channel changes before they happen.",
+  },
+  twitter: {
+    card: "summary",
+    creator: "@karmalisha",
+    title: "Slacki — Slack actions with human approval",
+    description:
+      "Read Slack channel history and review messages and channel changes before they happen.",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

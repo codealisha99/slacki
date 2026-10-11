@@ -20,7 +20,8 @@ type RefreshResponse = {
   authed_user?: { access_token?: string; refresh_token?: string; expires_in?: number };
 };
 
-const isExpiring = (row: TokenRow) => row.token_expires_at && row.token_expires_at.getTime() < Date.now() + 120_000;
+const isExpiring = (row: TokenRow) =>
+  row.token_expires_at && row.token_expires_at.getTime() < Date.now() + 120_000;
 
 export async function getSlackToken(userId: string, workspaceId: string): Promise<string> {
   const client = await db.connect();
@@ -33,7 +34,9 @@ export async function getSlackToken(userId: string, workspaceId: string): Promis
       [userId, workspaceId],
     );
     const row = result.rows[0] as TokenRow | undefined;
-    if (!row) {throw new Error("No Slack connection found for this workspace");}
+    if (!row) {
+      throw new Error("No Slack connection found for this workspace");
+    }
 
     if (isExpiring(row)) {
       if (!row.encrypted_refresh_token || !row.refresh_token_iv || !row.refresh_token_tag) {
@@ -41,8 +44,14 @@ export async function getSlackToken(userId: string, workspaceId: string): Promis
       }
       const clientId = process.env.SLACK_CLIENT_ID;
       const clientSecret = process.env.SLACK_CLIENT_SECRET;
-      if (!clientId || !clientSecret) {throw new Error("Slack OAuth is not configured");}
-      const refreshToken = decryptSecret(row.encrypted_refresh_token, row.refresh_token_iv, row.refresh_token_tag);
+      if (!clientId || !clientSecret) {
+        throw new Error("Slack OAuth is not configured");
+      }
+      const refreshToken = decryptSecret(
+        row.encrypted_refresh_token,
+        row.refresh_token_iv,
+        row.refresh_token_tag,
+      );
       const response = await fetch("https://slack.com/api/oauth.v2.access", {
         method: "POST",
         headers: {
@@ -53,7 +62,7 @@ export async function getSlackToken(userId: string, workspaceId: string): Promis
         cache: "no-store",
         signal: AbortSignal.timeout(10_000),
       });
-      const refreshed = await response.json() as RefreshResponse;
+      const refreshed = (await response.json()) as RefreshResponse;
       const accessToken = refreshed.authed_user?.access_token ?? refreshed.access_token;
       const nextRefreshToken = refreshed.authed_user?.refresh_token ?? refreshed.refresh_token;
       const expiresIn = refreshed.authed_user?.expires_in ?? refreshed.expires_in;
@@ -67,7 +76,17 @@ export async function getSlackToken(userId: string, workspaceId: string): Promis
         `UPDATE workspace_members SET encrypted_access_token = $3, token_iv = $4, token_tag = $5,
           encrypted_refresh_token = $6, refresh_token_iv = $7, refresh_token_tag = $8, token_expires_at = $9
           WHERE user_id = $1 AND workspace_id = $2`,
-        [userId, workspaceId, access.ciphertext, access.iv, access.tag, refresh.ciphertext, refresh.iv, refresh.tag, expiry],
+        [
+          userId,
+          workspaceId,
+          access.ciphertext,
+          access.iv,
+          access.tag,
+          refresh.ciphertext,
+          refresh.iv,
+          refresh.tag,
+          expiry,
+        ],
       );
       await client.query("COMMIT");
       return accessToken;

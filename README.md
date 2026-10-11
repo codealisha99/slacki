@@ -6,6 +6,17 @@
 
 Slacki is a control and automation layer for Slack, built on the existing TypeScript/Bun CLI. Humans, scripts and isolated agents can request structured actions, inspect policy decisions and review approvals before execution.
 
+Slacki has two surfaces: a local CLI and localhost UI that use your own Slack session, and a hosted multi-user workspace dashboard. The hosted app is deployed separately; its setup and current scope are documented in [apps/web](apps/web/README.md). The hosted app currently supports reading joined channel history and requesting approved messages, channel creation, and channel invitations.
+
+## Maintainer
+
+Created and maintained by **Alisha Karma**.
+
+- GitHub: [codealisha99](https://github.com/codealisha99)
+- Website: [alishakarma.com](https://alishakarma.com)
+- X: [@karmalisha](https://x.com/karmalisha)
+- Email: [lishykarma99@gmail.com](mailto:lishykarma99@gmail.com)
+
 The local control center adds Actions, Approvals, Workflows and Activity alongside the existing Slack tools. See [operating the control plane](docs/CONTROL_PLANE.md) for policy, agent sessions, persistence, dry runs and exact commands, and [implementation status](docs/IMPLEMENTATION_REPORT.md) for verification and remaining work. Live Slack mutation behavior is not comprehensively verified.
 
 Guiding principle:

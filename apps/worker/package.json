@@ -2,6 +2,7 @@
   "name": "slacki-worker",
   "version": "0.1.0",
   "private": true,
+  "description": "Background worker for human-approved Slacki workspace actions",
   "type": "module",
   "scripts": {
     "start": "node index.mjs"

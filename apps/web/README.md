@@ -1,6 +1,8 @@
 # Slacki hosted app
 
-This Next.js app is the multi-user product. It is separate from the local Slacki CLI and its localhost UI. Vercel serves the web app and route handlers; Neon stores accounts, workspace connections, sessions, and approvals. Slack access tokens are encrypted with AES-256-GCM before they are written to Neon.
+Created and maintained by [Alisha Karma](https://github.com/codealisha99). Slacki is a multi-user Slack workspace dashboard, separate from the local CLI and localhost UI.
+
+Vercel serves the web app and route handlers; Neon stores accounts, workspace connections, sessions, and approvals. Slack access tokens are encrypted with AES-256-GCM before they are written to Neon.
 
 ## Local setup
 
