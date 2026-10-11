@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "web",
+      "name": "slacki-web",
       "dependencies": {
         "@vercel/functions": "^3.9.11",
         "next": "16.4.0",
