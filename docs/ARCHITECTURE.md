@@ -1,6 +1,6 @@
 # slacki — architecture and testing
 
-slacki is a control and automation layer for Slack with a compatible CLI. Commands print compact JSON. A local browser app (`slacki ui`) sits on the same Slack session. Nothing in this repo is a hosted Slack website.
+This guide covers Slacki's CLI and local browser surfaces. The repository also contains a separate hosted Next.js app and approval worker; see the [project guide](PROJECT_GUIDE.md) and [hosted setup](../apps/web/README.md).
 
 Run from the repo:
 
@@ -40,7 +40,7 @@ Three jobs:
 2. **Call Slack** through one client wrapper, then shape the response for an agent (compact JSON, pruned empties, optional file downloads).
 3. **Expose that** as Commander CLI commands, plus two localhost HTML surfaces (`ui` and the compose/draft editor).
 
-There is no database, no cloud API, and no user accounts. State lives on disk under `~/.config/slacki` (credentials) and `~/.slacki` (runtime files / downloads).
+The CLI and local surfaces do not use the hosted account database. CLI credentials live under `~/.config/slacki`; local control state and downloads live under `~/.slacki` (or their configured paths).
 
 ---
 
