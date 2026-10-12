@@ -1,0 +1,75 @@
+# APIs, services, and configuration
+
+This inventory is based on runtime imports, network calls, package manifests, CI, and deployment docs. No credentials or prices were inspected. Pricing was not verified; check provider terms before production use.
+
+## Runtime dependencies
+
+| Service                                                                 | Purpose and status                                                                                                                                                                                                                               | Required when                                                   | Credentials/configuration                                                                                                                                                                                                                                                                                                                                                      | Cost          |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| [Slack Web API](https://docs.slack.dev/apis/web-api/)                   | Active. CLI reads and writes workspace content; hosted app reads history and executes approved actions.                                                                                                                                          | Any live Slack feature.                                         | CLI: saved Slack credentials, or `SLACK_TOKEN`; browser-session imports may use `SLACK_COOKIE_D` / `SLACK_COOKIE` and `SLACK_WORKSPACE_URL`. Hosted OAuth: `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_REDIRECT_URI`. Create/configure a Slack app in [Slack API app management](https://api.slack.com/apps); scopes are listed in [hosted setup](../apps/web/README.md). | Not verified. |
+| Slack web-client methods                                                | Active for selected CLI features: Later, Slack-native drafts, unread counts, and workflow/bookmark methods use endpoints such as `saved.*`, `drafts.*`, and `client.counts`. These are not all documented public Web API methods and may change. | Only those features; standard public API features are separate. | Imported browser session and workspace; no separate keys.                                                                                                                                                                                                                                                                                                                      | Not verified. |
+| PostgreSQL (deployment documented with [Neon](https://neon.tech/docs/)) | Active for hosted accounts, workspaces, sessions, and approvals. Local CLI does not use this database.                                                                                                                                           | Hosted app and worker.                                          | `DATABASE_URL` for web and worker; `DATABASE_URL_UNPOOLED` is required for migrations when `DATABASE_URL` is a Neon pooled URL. Obtain connection strings from the database provider.                                                                                                                                                                                          | Not verified. |
+| [Vercel](https://vercel.com/docs/frameworks/full-stack/nextjs)          | Active deployment platform for the hosted Next.js app. `@vercel/functions` attaches the database pool to Vercel lifecycle management.                                                                                                            | Hosted deployment only; not needed for CLI or mock tests.       | Set hosted variables in Vercel project settings. Vercel supplies `VERCEL` automatically.                                                                                                                                                                                                                                                                                       | Not verified. |
+| [Railway](https://docs.railway.com/build-deploy)                        | Active deployment target for the long-running hosted approval worker.                                                                                                                                                                            | To execute hosted approvals. Without it, approvals do not run.  | Service variables: `DATABASE_URL`, `TOKEN_ENCRYPTION_KEY`, `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`.                                                                                                                                                                                                                                                                           | Not verified. |
+
+The hosted OAuth flow uses Slack's [OAuth authorization-code flow](https://docs.slack.dev/authentication/installing-with-oauth/) and token endpoint. There is no model-provider API: agents are external callers and no LLM SDK/provider is used.
+
+## Optional distribution and development services
+
+| Service or integration                                                                                                 | Purpose and status                                                                                                                                                                                          | Configuration                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#list-the-latest-release) and release downloads | Active but optional CLI update checks and binary updates; also used by the Nix package and update script. Public release reads need no credential. Set `SLACKI_NO_UPDATE_CHECK=1` to disable the CLI check. | Optional `GITHUB_TOKEN` is used by the Nix update script to authenticate its GitHub API request. GitHub Actions also supplies `GITHUB_TOKEN`.  |
+| [npm registry](https://docs.npmjs.com/about-the-public-npm-registry)                                                   | Optional install/update/distribution for the CLI. Release publishing uses npm provenance.                                                                                                                   | No token for public installs. Publishing workflow reads the GitHub secret `NPM_TOKEN` as `NODE_AUTH_TOKEN`; not needed to run the application. |
+| GitHub Actions                                                                                                         | Active CI, release, and scheduled Nix-source update workflows; not used by app runtime.                                                                                                                     | Actions supplies `GITHUB_TOKEN`. Release publishing additionally requires the repository secret `NPM_TOKEN`.                                   |
+| Nix, nixpkgs, flake-utils                                                                                              | Optional build/package path; flake inputs and binary assets are fetched from GitHub. Not used at runtime.                                                                                                   | No app credentials.                                                                                                                            |
+| [Google Fonts](https://developers.google.com/fonts/docs/getting_started)                                               | Optional Inter font for the local draft editor; system sans-serif fallback remains.                                                                                                                         | No credential. Network access only affects the remote font.                                                                                    |
+| [skills.sh](https://skills.sh/)                                                                                        | Optional distribution of the repository's agent skill; not called by the application at runtime.                                                                                                            | No application credentials.                                                                                                                    |
+| Playwright / Chromium                                                                                                  | Development-only browser automation. E2E uses a local fixture, not Slack.                                                                                                                                   | Install browser with `bunx playwright install chromium`; no service credential.                                                                |
+
+No analytics, model API, external event bus, or hosted telemetry endpoint is configured. Local telemetry only counts Slack rate limits within a command.
+
+## Environment variables
+
+### Hosted web app and worker
+
+| Variable                | Required                                                | Purpose                                                                                                                              |
+| ----------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `APP_URL`               | Web: yes for OAuth callback handling; used in redirects | Public base URL for hosted app.                                                                                                      |
+| `SLACK_CLIENT_ID`       | Web OAuth and worker token refresh                      | Slack app OAuth client ID.                                                                                                           |
+| `SLACK_CLIENT_SECRET`   | Web OAuth and worker token refresh                      | Slack app OAuth client secret.                                                                                                       |
+| `SLACK_REDIRECT_URI`    | Web OAuth                                               | Must exactly match the registered Slack HTTPS callback.                                                                              |
+| `DATABASE_URL`          | Web and worker                                          | PostgreSQL connection string.                                                                                                        |
+| `DATABASE_URL_UNPOOLED` | No; migration-only override                             | Direct database connection used by migrations when set.                                                                              |
+| `TOKEN_ENCRYPTION_KEY`  | Web and worker                                          | 32-byte key encoded as 64 hexadecimal characters; both services must use the same key. Generate locally with `openssl rand -hex 32`. |
+
+See [apps/web/.env.example](../apps/web/.env.example). Do not commit populated env files or paste secret values into logs or documentation.
+
+### CLI
+
+| Variable                         | Purpose                                                                       |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| `SLACK_TOKEN`                    | Optional standard Slack token; overrides saved auth.                          |
+| `SLACK_COOKIE_D`, `SLACK_COOKIE` | Optional browser-session cookie input; `SLACK_COOKIE_D` takes precedence.     |
+| `SLACK_WORKSPACE_URL`            | Optional default workspace URL for auth and targeting.                        |
+| `SLACKI_SAFE_MODE`               | Optional mutation guard; accepts `1`, `true`, `yes`, or `on`.                 |
+| `SLACKI_COMMAND_TIMEOUT_MS`      | Optional command watchdog override.                                           |
+| `SLACKI_API_TIMEOUT_MS`          | Optional Slack API timeout; legacy alias `SLACK_API_TIMEOUT_MS` is also read. |
+| `SLACKI_RATE_LIMIT_MAX_WAIT_MS`  | Optional maximum wait before a rate-limit error.                              |
+| `SLACKI_KEYCHAIN_TIMEOUT_MS`     | Optional keychain command timeout.                                            |
+| `SLACKI_CONTROL_DIR`             | Optional local control-state directory; default is `~/.slacki/control`.       |
+| `XDG_RUNTIME_DIR`                | Optional platform runtime directory used for temporary app files.             |
+| `SLACKI_NO_UPDATE_CHECK=1`       | Disables automatic public GitHub release checks.                              |
+
+### Live-smoke tests
+
+Live smoke is opt-in and can contact the configured Slack workspace. It requires `SLACKI_LIVE_TEST=1`, `SLACK_TOKEN`, `SLACK_WORKSPACE_URL`, and `SLACKI_TEST_CHANNEL`; browser auth may additionally use `SLACK_COOKIE_D`. Use a dedicated test channel. See [control-plane test notes](CONTROL_PLANE.md).
+
+The mock E2E harness also uses internal `SLACKI_E2E_PORT`, `SLACKI_E2E_SESSION_META`, `SLACKI_TEST_PORT`, and `SLACKI_TEST_SESSION_FILE` values. Playwright configures these automatically; they are not application secrets.
+
+## Official references
+
+- [Slack API app management](https://api.slack.com/apps)
+- [Slack scopes](https://docs.slack.dev/reference/scopes/)
+- [Neon connection strings](https://neon.tech/docs/connect/connect-from-any-app)
+- [Vercel environment variables](https://vercel.com/docs/environment-variables)
+- [Railway variables](https://docs.railway.com/variables)
